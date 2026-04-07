@@ -32,6 +32,25 @@ floor.position.y = -10;
 scene.add(floor);
 
 const objects = [];
+let soundOn = true;
+let audioCtx = null;
+let frameCount = 0;
+let fps = 0;
+let lastFpsAt = performance.now();
+
+function ping(freq = 440, duration = 0.05) {
+  if (!soundOn) return;
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.value = freq;
+  gain.gain.value = 0.03;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
 
 function addSphere() {
   const r = 2;
@@ -45,6 +64,7 @@ function addSphere() {
   );
   scene.add(mesh);
 
+  body.addEventListener('collide', () => ping(300 + Math.random() * 200, 0.03));
   objects.push({ body, mesh });
 }
 
@@ -76,6 +96,7 @@ function addCylinder() {
     new THREE.MeshStandardMaterial({ color: 0x7fd1b9 })
   );
   scene.add(mesh);
+  body.addEventListener('collide', () => ping(200 + Math.random() * 240, 0.03));
   objects.push({ body, mesh });
 }
 
@@ -123,6 +144,9 @@ document.getElementById('drop-cylinder').addEventListener('click', addCylinder);
 document.getElementById('drop-cone').addEventListener('click', addCone);
 document.getElementById('drop-pyramid').addEventListener('click', addPyramid);
 document.getElementById('clear').addEventListener('click', clearAll);
+document.getElementById('sound-on').addEventListener('change', (e) => {
+  soundOn = !!e.target.checked;
+});
 
 const gravityInput = document.getElementById('gravity');
 const frictionInput = document.getElementById('friction');
@@ -154,6 +178,16 @@ function animate() {
     obj.mesh.position.copy(obj.body.position);
     obj.mesh.quaternion.copy(obj.body.quaternion);
   }
+
+  frameCount += 1;
+  const now = performance.now();
+  if (now - lastFpsAt >= 1000) {
+    fps = frameCount;
+    frameCount = 0;
+    lastFpsAt = now;
+    document.getElementById('stat-fps').textContent = String(fps);
+  }
+  document.getElementById('stat-objects').textContent = String(objects.length);
 
   renderer.render(scene, camera);
 }
