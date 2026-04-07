@@ -1,45 +1,55 @@
 html,
 body {
-	margin: 0;
-	width: 100%;
-	height: 100%;
-	overflow: hidden;
-	font-family: Arial, sans-serif;
-	background: #0b0f1a;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: #0b0f1a;
 }
 
 #canvas {
-	width: 100%;
-	height: 100%;
-	display: block;
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 
 .panel {
-	position: fixed;
-	top: 12px;
-	left: 12px;
-	min-width: 240px;
-	padding: 12px;
-	border-radius: 8px;
-	background: rgba(11, 15, 26, 0.85);
-	color: #e5ecff;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    min-width: 240px;
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(11, 15, 26, 0.85);
+    color: #e5ecff;
 }
 
 .row {
-	display: flex;
-	gap: 8px;
-	margin-top: 8px;
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.control {
+    display: grid;
+    grid-template-columns: 60px 1fr 44px;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    color: #d7e3ff;
+    font-size: 13px;
 }
 
 button {
-	padding: 8px 10px;
-	border: 0;
-	border-radius: 6px;
-	cursor: pointer;
-	background: #2d426e;
-	color: white;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #2d426e;
+    color: white;
 }
 
 button:hover {
-	background: #3b5388;
+    background: #3b5388;
 }

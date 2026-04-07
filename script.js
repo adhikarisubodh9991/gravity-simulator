@@ -15,6 +15,8 @@ scene.add(sun);
 
 const world = new CANNON.World();
 world.gravity.set(0, -20, 0);
+world.defaultContactMaterial.friction = 0.4;
+world.defaultContactMaterial.restitution = 0.5;
 
 const floorBody = new CANNON.Body({ mass: 0, shape: new CANNON.Plane() });
 floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
@@ -73,6 +75,28 @@ function clearAll() {
 document.getElementById('drop-sphere').addEventListener('click', addSphere);
 document.getElementById('drop-box').addEventListener('click', addBox);
 document.getElementById('clear').addEventListener('click', clearAll);
+
+const gravityInput = document.getElementById('gravity');
+const frictionInput = document.getElementById('friction');
+const bounceInput = document.getElementById('bounce');
+
+gravityInput.addEventListener('input', () => {
+  const v = Number(gravityInput.value);
+  world.gravity.set(0, -v, 0);
+  document.getElementById('gravity-v').textContent = String(v);
+});
+
+frictionInput.addEventListener('input', () => {
+  const v = Number(frictionInput.value);
+  world.defaultContactMaterial.friction = v;
+  document.getElementById('friction-v').textContent = v.toFixed(2);
+});
+
+bounceInput.addEventListener('input', () => {
+  const v = Number(bounceInput.value);
+  world.defaultContactMaterial.restitution = v;
+  document.getElementById('bounce-v').textContent = v.toFixed(2);
+});
 
 function animate() {
   requestAnimationFrame(animate);

@@ -16,6 +16,23 @@
       <button id="drop-box">Drop Box</button>
       <button id="clear">Clear</button>
     </div>
+
+    <h3>Physics</h3>
+    <div class="control">
+      <label>Gravity</label>
+      <input id="gravity" type="range" min="0" max="40" value="20" step="1" />
+      <span id="gravity-v">20</span>
+    </div>
+    <div class="control">
+      <label>Friction</label>
+      <input id="friction" type="range" min="0" max="1" value="0.4" step="0.05" />
+      <span id="friction-v">0.40</span>
+    </div>
+    <div class="control">
+      <label>Bounce</label>
+      <input id="bounce" type="range" min="0" max="1" value="0.5" step="0.05" />
+      <span id="bounce-v">0.50</span>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
