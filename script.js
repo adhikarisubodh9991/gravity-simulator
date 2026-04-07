@@ -64,6 +64,51 @@ function addBox() {
   objects.push({ body, mesh });
 }
 
+function addCylinder() {
+  const r = 1.5;
+  const h = 4;
+  const body = new CANNON.Body({ mass: 9, shape: new CANNON.Cylinder(r, r, h, 16) });
+  body.position.set((Math.random() - 0.5) * 20, 35, (Math.random() - 0.5) * 20);
+  world.addBody(body);
+
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(r, r, h, 16),
+    new THREE.MeshStandardMaterial({ color: 0x7fd1b9 })
+  );
+  scene.add(mesh);
+  objects.push({ body, mesh });
+}
+
+function addCone() {
+  const r = 1.8;
+  const h = 4;
+  // approximation in physics for simplicity
+  const body = new CANNON.Body({ mass: 8, shape: new CANNON.Sphere(r * 0.85) });
+  body.position.set((Math.random() - 0.5) * 20, 35, (Math.random() - 0.5) * 20);
+  world.addBody(body);
+
+  const mesh = new THREE.Mesh(
+    new THREE.ConeGeometry(r, h, 20),
+    new THREE.MeshStandardMaterial({ color: 0xffd166 })
+  );
+  scene.add(mesh);
+  objects.push({ body, mesh });
+}
+
+function addPyramid() {
+  const s = 3;
+  const body = new CANNON.Body({ mass: 9, shape: new CANNON.Box(new CANNON.Vec3(s / 2, s / 2, s / 2)) });
+  body.position.set((Math.random() - 0.5) * 20, 35, (Math.random() - 0.5) * 20);
+  world.addBody(body);
+
+  const mesh = new THREE.Mesh(
+    new THREE.ConeGeometry(s * 0.8, s, 4),
+    new THREE.MeshStandardMaterial({ color: 0xc77dff })
+  );
+  scene.add(mesh);
+  objects.push({ body, mesh });
+}
+
 function clearAll() {
   for (const obj of objects) {
     world.removeBody(obj.body);
@@ -74,6 +119,9 @@ function clearAll() {
 
 document.getElementById('drop-sphere').addEventListener('click', addSphere);
 document.getElementById('drop-box').addEventListener('click', addBox);
+document.getElementById('drop-cylinder').addEventListener('click', addCylinder);
+document.getElementById('drop-cone').addEventListener('click', addCone);
+document.getElementById('drop-pyramid').addEventListener('click', addPyramid);
 document.getElementById('clear').addEventListener('click', clearAll);
 
 const gravityInput = document.getElementById('gravity');
