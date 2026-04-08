@@ -30,6 +30,8 @@ const floor = new THREE.Mesh(
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -10;
 scene.add(floor);
+let floorSize = { w: 160, h: 160 };
+let voidY = -80;
 
 const objects = [];
 let soundOn = true;
@@ -138,12 +140,23 @@ function clearAll() {
   objects.length = 0;
 }
 
+function applyEnvironment() {
+  const w = Math.max(80, Math.min(500, Number(document.getElementById('ground-w').value) || 160));
+  const h = Math.max(80, Math.min(500, Number(document.getElementById('ground-h').value) || 160));
+  voidY = Number(document.getElementById('void-y').value) || -80;
+  floorSize = { w, h };
+
+  floor.geometry.dispose();
+  floor.geometry = new THREE.PlaneGeometry(w, h);
+}
+
 document.getElementById('drop-sphere').addEventListener('click', addSphere);
 document.getElementById('drop-box').addEventListener('click', addBox);
 document.getElementById('drop-cylinder').addEventListener('click', addCylinder);
 document.getElementById('drop-cone').addEventListener('click', addCone);
 document.getElementById('drop-pyramid').addEventListener('click', addPyramid);
 document.getElementById('clear').addEventListener('click', clearAll);
+document.getElementById('apply-env').addEventListener('click', applyEnvironment);
 document.getElementById('sound-on').addEventListener('change', (e) => {
   soundOn = !!e.target.checked;
 });
@@ -177,6 +190,18 @@ function animate() {
   for (const obj of objects) {
     obj.mesh.position.copy(obj.body.position);
     obj.mesh.quaternion.copy(obj.body.quaternion);
+  }
+
+  for (let i = objects.length - 1; i >= 0; i -= 1) {
+    const o = objects[i];
+    const xOut = Math.abs(o.body.position.x) > floorSize.w / 2;
+    const zOut = Math.abs(o.body.position.z) > floorSize.h / 2;
+    const yOut = o.body.position.y < voidY;
+    if (xOut || zOut || yOut) {
+      world.removeBody(o.body);
+      scene.remove(o.mesh);
+      objects.splice(i, 1);
+    }
   }
 
   frameCount += 1;

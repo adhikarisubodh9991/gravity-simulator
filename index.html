@@ -41,6 +41,26 @@
     <div class="control"><label>Objects</label><span id="stat-objects">0</span></div>
     <div class="control"><label>FPS</label><span id="stat-fps">0</span></div>
 
+    <h3>Environment</h3>
+    <div class="control">
+      <label>Ground W</label>
+      <input id="ground-w" type="number" min="80" max="500" value="160" step="10" />
+      <span></span>
+    </div>
+    <div class="control">
+      <label>Ground H</label>
+      <input id="ground-h" type="number" min="80" max="500" value="160" step="10" />
+      <span></span>
+    </div>
+    <div class="control">
+      <label>Void Y</label>
+      <input id="void-y" type="number" min="-500" max="0" value="-80" step="5" />
+      <span></span>
+    </div>
+    <div class="row">
+      <button id="apply-env">Apply Env</button>
+    </div>
+
     <h3>Audio</h3>
     <div class="row">
       <label style="color:#d7e3ff; font-size:13px; display:flex; gap:6px; align-items:center;">
