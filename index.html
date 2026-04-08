@@ -1,76 +1,280 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gravity Simulator</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, orientation=landscape">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gravity Simulator">
+    <meta name="theme-color" content="#0a0a15">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="fullscreen" content="yes">
+    <title>Gravity Simulator</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+    <canvas id="canvas"></canvas>
 
-  <div class="panel">
-    <h3>Drop Objects</h3>
-    <div class="row">
-      <button id="drop-sphere">Drop Ball</button>
-      <button id="drop-box">Drop Box</button>
-      <button id="drop-cylinder">Cylinder</button>
-      <button id="drop-cone">Cone</button>
-      <button id="drop-pyramid">Pyramid</button>
-      <button id="clear">Clear</button>
+    <div class="ui-panel" id="control-tray">
+        <div class="ui-header">
+            <h1>Gravity Simulator</h1>
+            <p class="ui-subtitle">Interactive gravity sandbox</p>
+        </div>
+
+        <section class="ui-section">
+            <h2 class="ui-section-title">Drop Objects</h2>
+            <div class="button-grid">
+                <button id="btn-drop-sphere" class="btn btn-primary">⚪ Ball</button>
+                <button id="btn-drop-box" class="btn btn-primary">📦 Box</button>
+                <button id="btn-drop-cylinder" class="btn btn-primary">🔷 Cylinder</button>
+                <button id="btn-drop-cone" class="btn btn-primary">📍 Cone</button>
+                <button id="btn-drop-pyramid" class="btn btn-primary">🔺 Pyramid</button>
+                <button id="btn-drop-capsule" class="btn btn-primary">💊 Capsule</button>
+                <button id="btn-drop-torus" class="btn btn-primary">⭕ Torus</button>
+                <button id="btn-drop-icosahedron" class="btn btn-primary">✦ Icosahedron</button>
+            </div>
+            
+            <div class="control-group">
+                <label class="control-label">Object Mass (kg)</label>
+                <input type="number" id="input-mass" min="0.1" max="1000" value="10" step="0.5" class="number-input">
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Object Size (0.5x - 3x)</label>
+                <input type="number" id="input-size" min="0.5" max="3" value="1" step="0.1" class="number-input">
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Drop Height</label>
+                <input type="number" id="input-drop-height" min="10" max="500" value="60" step="5" class="number-input">
+            </div>
+
+            <div class="control-group" id="selected-object-info" style="display:none; margin-top: 12px; padding: 10px; background: rgba(0,212,255,0.2); border-radius: 6px; border-left: 3px solid #00d4ff;">
+                <p id="selected-object-text" style="margin: 0; font-size: 0.9rem; color: #00d4ff;">Object selected</p>
+            </div>
+        </section>
+
+        <section class="ui-section">
+            <h2 class="ui-section-title">Physics</h2>
+            
+            <div class="control-group">
+                <label class="control-label">Gravity (m/s²)</label>
+                <input type="number" id="input-gravity" min="0" max="100" value="20" step="0.5" class="number-input">
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Friction (0-1)</label>
+                <input type="number" id="input-friction" min="0" max="1" value="0.4" step="0.05" class="number-input">
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Restitution/Bounce (0-1)</label>
+                <input type="number" id="input-restitution" min="0" max="1" value="0.5" step="0.05" class="number-input">
+            </div>
+        </section>
+
+        <section class="ui-section">
+            <h2 class="ui-section-title">Environment</h2>
+            
+            <div class="control-group">
+                <label class="control-label">Ground Width</label>
+                <input type="number" id="input-ground-width" min="200" max="1000" value="200" step="50" class="number-input">
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Ground Height</label>
+                <input type="number" id="input-ground-height" min="200" max="1000" value="200" step="50" class="number-input">
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Void Threshold</label>
+                <input type="number" id="input-void-threshold" min="-500" max="500" value="-300" step="10" class="number-input">
+            </div>
+        </section>
+
+        <section class="ui-section">
+            <h2 class="ui-section-title">Scene</h2>
+            <div class="button-grid">
+                <button id="btn-play-pause" class="btn btn-secondary">⏸ Pause</button>
+                <button id="btn-slow-motion" class="btn btn-secondary">🐢 Slow-Mo</button>
+            </div>
+            <button id="btn-clear-all" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">🗑 Clear All</button>
+        </section>
+
+        <section class="ui-section">
+            <h2 class="ui-section-title">Audio</h2>
+            <label class="checkbox-label">
+                <input type="checkbox" id="toggle-sound" checked>
+                <span>Enable Sound Effects</span>
+            </label>
+        </section>
+
+        <section class="ui-section">
+            <h2 class="ui-section-title">Stats</h2>
+            <div class="stats-box">
+                <div class="stat-row">
+                    <span class="stat-label">Objects:</span>
+                    <span class="stat-value" id="stat-object-count">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">FPS:</span>
+                    <span class="stat-value" id="stat-fps">60</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Active Bodies:</span>
+                    <span class="stat-value" id="stat-bodies">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Physics Time:</span>
+                    <span class="stat-value" id="stat-physics-time">0</span> ms
+                </div>
+            </div>
+        </section>
     </div>
 
-    <h3>Physics</h3>
-    <div class="control">
-      <label>Gravity</label>
-      <input id="gravity" type="range" min="0" max="40" value="20" step="1" />
-      <span id="gravity-v">20</span>
-    </div>
-    <div class="control">
-      <label>Friction</label>
-      <input id="friction" type="range" min="0" max="1" value="0.4" step="0.05" />
-      <span id="friction-v">0.40</span>
-    </div>
-    <div class="control">
-      <label>Bounce</label>
-      <input id="bounce" type="range" min="0" max="1" value="0.5" step="0.05" />
-      <span id="bounce-v">0.50</span>
-    </div>
+    <button id="btn-toggle-ui" class="tray-handle" aria-expanded="true" aria-label="Toggle controls">❮</button>
 
-    <h3>Stats</h3>
-    <div class="control"><label>Objects</label><span id="stat-objects">0</span></div>
-    <div class="control"><label>FPS</label><span id="stat-fps">0</span></div>
 
-    <h3>Environment</h3>
-    <div class="control">
-      <label>Ground W</label>
-      <input id="ground-w" type="number" min="80" max="500" value="160" step="10" />
-      <span></span>
-    </div>
-    <div class="control">
-      <label>Ground H</label>
-      <input id="ground-h" type="number" min="80" max="500" value="160" step="10" />
-      <span></span>
-    </div>
-    <div class="control">
-      <label>Void Y</label>
-      <input id="void-y" type="number" min="-500" max="0" value="-80" step="5" />
-      <span></span>
-    </div>
-    <div class="row">
-      <button id="apply-env">Apply Env</button>
-    </div>
 
-    <h3>Audio</h3>
-    <div class="row">
-      <label style="color:#d7e3ff; font-size:13px; display:flex; gap:6px; align-items:center;">
-        <input id="sound-on" type="checkbox" checked /> Enable Sound
-      </label>
-    </div>
-  </div>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/objects.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/interactions.js"></script>
+    <script>
+        const physics = new PhysicsWorld();
+        const renderer = new ThreeRenderer();
+        const objectManager = new ObjectManager(physics, renderer);
+        const ui = new UIController(physics, objectManager, renderer);
+        const interactions = new InteractionSystem(objectManager, physics, renderer);
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
-  <script src="script.js"></script>
+        const tray = document.getElementById('control-tray');
+        const trayToggle = document.getElementById('btn-toggle-ui');
+        trayToggle.addEventListener('click', () => {
+            tray.classList.toggle('collapsed');
+            const expanded = !tray.classList.contains('collapsed');
+            trayToggle.textContent = expanded ? '❮' : '❯';
+            trayToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        });
+
+        renderer.setZoomSensitivity(3);
+
+
+
+        let isRunning = true;
+        let isSlowMo = false;
+        let lastFrameTime = performance.now();
+        let frameCount = 0;
+        let lastFpsTime = performance.now();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const now = performance.now();
+            const deltaTime = Math.min((now - lastFrameTime) / 1000, 0.016);
+            lastFrameTime = now;
+
+            if (isRunning) {
+                const step = isSlowMo ? deltaTime * 0.25 : deltaTime;
+                physics.step(step);
+                objectManager.updateMeshes();
+            }
+
+            renderer.render();
+
+            frameCount++;
+            if (now - lastFpsTime >= 1000) {
+                ui.updateStats(frameCount, objectManager.getObjectCount(), physics.getBodyCount());
+                frameCount = 0;
+                lastFpsTime = now;
+            }
+        }
+
+        // UI Event Handlers
+        document.getElementById('btn-play-pause').addEventListener('click', () => {
+            isRunning = !isRunning;
+            ui.updatePlayPauseButton(isRunning);
+        });
+
+        document.getElementById('btn-slow-motion').addEventListener('click', () => {
+            isSlowMo = !isSlowMo;
+            ui.updateSlowMoButton(isSlowMo);
+        });
+
+        document.getElementById('btn-clear-all').addEventListener('click', () => {
+            objectManager.clearAll();
+        });
+
+        document.getElementById('input-gravity').addEventListener('change', (e) => {
+            const gravity = parseFloat(e.target.value);
+            physics.setGravity(gravity);
+        });
+
+        document.getElementById('input-friction').addEventListener('change', (e) => {
+            const friction = parseFloat(e.target.value);
+            physics.setFriction(friction);
+        });
+
+        document.getElementById('input-restitution').addEventListener('change', (e) => {
+            const restitution = parseFloat(e.target.value);
+            physics.setRestitution(restitution);
+        });
+
+        // Ground dimensions
+        document.getElementById('input-ground-width').addEventListener('change', (e) => {
+            const width = parseFloat(e.target.value);
+            const height = parseFloat(document.getElementById('input-ground-height').value);
+            renderer.updateGroundDimensions(width, height);
+        });
+
+        document.getElementById('input-ground-height').addEventListener('change', (e) => {
+            const height = parseFloat(e.target.value);
+            const width = parseFloat(document.getElementById('input-ground-width').value);
+            renderer.updateGroundDimensions(width, height);
+        });
+
+        // Void threshold
+        document.getElementById('input-void-threshold').addEventListener('change', (e) => {
+            const threshold = parseFloat(e.target.value);
+            objectManager.setVoidThreshold(threshold);
+        });
+        document.getElementById('toggle-sound').addEventListener('change', (e) => {
+            objectManager.setSoundEnabled(e.target.checked);
+        });
+
+        // Keyboard shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                isRunning = !isRunning;
+                ui.updatePlayPauseButton(isRunning);
+            }
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                isSlowMo = true;
+                ui.updateSlowMoButton(true);
+            }
+            if (e.code === 'Delete') {
+                objectManager.clearAll();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                isSlowMo = false;
+                ui.updateSlowMoButton(false);
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            renderer.onWindowResize();
+        });
+
+        // Start animation loop
+        animate();
+    </script>
 </body>
 </html>
