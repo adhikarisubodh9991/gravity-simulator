@@ -51,6 +51,19 @@ class UIController {
         }
     }
 
+    updateDestructionModeButton(enabled) {
+        const btn = document.getElementById('btn-toggle-destroy');
+        if (enabled) {
+            btn.textContent = '💥 Destroy Mode (ON)';
+            btn.style.background = '#ff3366';
+            btn.style.borderColor = '#ff3366';
+        } else {
+            btn.textContent = '💥 Destruction Mode';
+            btn.style.background = 'transparent';
+            btn.style.borderColor = '#00d4ff';
+        }
+    }
+
     updateStats(fps, count, bodies) {
         this.els.objCount.textContent = count;
         this.els.fps.textContent = fps;

@@ -12,6 +12,8 @@ class ObjectManager {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.soundEnabled = true;
 
+        this.destructionMode = false;
+
         // things that fall off the map fade out nicely
         this.voidThreshold = -100;
         this.fadingObjects = new Map();
@@ -22,6 +24,7 @@ class ObjectManager {
 
         // Physics event listeners for collisions
         this.setupCollisionListeners();
+        this.setupDestructionMode();
     }
 
     setupCollisionListeners() {
@@ -30,6 +33,36 @@ class ObjectManager {
                 const impact = Math.abs(e.contact.getImpactVelocityAlongNormal());
                 if (impact > 10) {
                     this.playCollisionSound(Math.min(impact / 50, 1));
+                }
+            }
+        });
+    }
+
+    setupDestructionMode() {
+        document.getElementById('canvas').addEventListener('click', (e) => {
+            if (!this.destructionMode) return;
+
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            const canvas = document.getElementById('canvas');
+
+            mouse.x = (e.clientX / canvas.clientWidth) * 2 - 1;
+            mouse.y = -(e.clientY / canvas.clientHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, this.renderer.camera);
+
+            const meshes = Array.from(this.objects.values()).map(obj => obj.mesh);
+            const intersects = raycaster.intersectObjects(meshes);
+
+            if (intersects.length > 0) {
+                const clickedMesh = intersects[0].object;
+                // find and delete it
+                for (let [bodyId, obj] of this.objects) {
+                    if (obj.mesh === clickedMesh) {
+                        this.removeObject(bodyId);
+                        this.playDestructionSound();
+                        break;
+                    }
                 }
             }
         });
@@ -272,6 +305,10 @@ class ObjectManager {
         this.soundEnabled = enabled;
     }
 
+    toggleDestructionMode() {
+        this.destructionMode = !this.destructionMode;
+    }
+
     setVoidThreshold(threshold) {
         this.voidThreshold = threshold;
     }
@@ -339,6 +376,11 @@ class ObjectManager {
     playExplosionSound() {
         // simple explosion sound
         this.playSound(200, 0.3, 'sine');
+    }
+
+    playDestructionSound() {
+        // simple destruction sound
+        this.playSound(250, 0.15, 'sine');
     }
 
     saveState() {

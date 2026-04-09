@@ -98,6 +98,7 @@
                 <button id="btn-play-pause" class="btn btn-secondary">⏸ Pause</button>
                 <button id="btn-slow-motion" class="btn btn-secondary">🐢 Slow-Mo</button>
             </div>
+            <button id="btn-toggle-destroy" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">💥 Destruction Mode</button>
             <button id="btn-clear-all" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">🗑 Clear All</button>
         </section>
 
@@ -241,6 +242,11 @@
             const threshold = parseFloat(e.target.value);
             objectManager.setVoidThreshold(threshold);
         });
+        document.getElementById('btn-toggle-destroy').addEventListener('click', () => {
+            objectManager.toggleDestructionMode();
+            ui.updateDestructionModeButton(objectManager.destructionMode);
+        });
+
         document.getElementById('toggle-sound').addEventListener('change', (e) => {
             objectManager.setSoundEnabled(e.target.checked);
         });

@@ -32,6 +32,13 @@ class InteractionSystem {
         canvas.addEventListener('touchstart', e => this.onTouchStart(e), { passive: false });
         canvas.addEventListener('touchend', e => this.onTouchEnd(e));
         this.setupObjectDropButtons();
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'd') {
+                this.om.toggleDestructionMode();
+                this.showNotification(this.om.destructionMode ? 'Destroy mode ON' : 'Destroy mode OFF', 1200);
+            }
+        });
     }
 
     setupObjectDropButtons() {
