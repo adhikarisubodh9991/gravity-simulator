@@ -98,6 +98,8 @@
                 <button id="btn-play-pause" class="btn btn-secondary">⏸ Pause</button>
                 <button id="btn-slow-motion" class="btn btn-secondary">🐢 Slow-Mo</button>
             </div>
+            <button id="btn-fullscreen" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">📱 Enter Fullscreen</button>
+            <small id="fullscreen-status" style="display:block; opacity:0.8; margin-top:6px;">Fullscreen: off</small>
             
             <div class="control-group">
                 <label class="control-label">Nuke Power (50-1000)</label>
@@ -147,6 +149,114 @@
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
+    <!-- Mobile fullscreen setup -->
+    <script>
+        // Check if we're on a mobile device
+        const isMobileDevice = () => {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent);
+        };
+
+        const isFileProtocol = window.location.protocol === 'file:';
+
+        // Try to lock the screen in landscape mode to prevent accidental rotation
+        const lockLandscapeOrientation = () => {
+            if (isFileProtocol) return;
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape-primary').catch((err) => {
+                    // Some devices don't support orientation lock, that's okay
+                });
+            }
+        };
+
+        // Request fullscreen for the entire page
+        const goFullscreen = async () => {
+            if (isFileProtocol) return;
+            const elem = document.documentElement;
+            
+            try {
+                // Try the standard fullscreen API first
+                if (elem.requestFullscreen) {
+                    await elem.requestFullscreen({ navigationUI: 'hide' });
+                } 
+                // Fallback for older browsers and webkit implementations
+                else if (elem.webkitRequestFullscreen) {
+                    await elem.webkitRequestFullscreen();
+                }
+                // IE 11 and older Edge
+                else if (elem.msRequestFullscreen) {
+                    await elem.msRequestFullscreen();
+                }
+                // If we get here and nothing worked, that's okay - the app still functions
+            } catch (error) {
+                // Device might not support fullscreen, or user denied permission
+                // The app is still fully functional in windowed mode
+            }
+        };
+
+        const exitFullscreen = async () => {
+            try {
+                if (document.exitFullscreen) {
+                    await document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    await document.webkitExitFullscreen();
+                }
+            } catch (error) {
+                // Keep running in current mode if exit fails.
+            }
+        };
+
+        const isFullscreenActive = () => {
+            return !!(document.fullscreenElement || document.webkitFullscreenElement);
+        };
+
+        // Lock orientation and attempt fullscreen when the page loads
+        window.addEventListener('load', () => {
+            lockLandscapeOrientation();
+            
+            // On mobile devices, try fullscreen on a short delay to ensure DOM is ready
+            if (isMobileDevice() && !isFileProtocol) {
+                setTimeout(goFullscreen, 500);
+            }
+
+            const fsBtn = document.getElementById('btn-fullscreen');
+            const fsStatus = document.getElementById('fullscreen-status');
+            const syncFullscreenState = () => {
+                const active = isFullscreenActive();
+                fsBtn.textContent = active ? '📱 Exit Fullscreen' : '📱 Enter Fullscreen';
+                fsStatus.textContent = isFileProtocol
+                    ? 'Fullscreen: unavailable on file://'
+                    : `Fullscreen: ${active ? 'on' : 'off'}`;
+            };
+
+            fsBtn.addEventListener('click', async () => {
+                if (isFullscreenActive()) {
+                    await exitFullscreen();
+                } else {
+                    await goFullscreen();
+                }
+                syncFullscreenState();
+            });
+
+            document.addEventListener('fullscreenchange', syncFullscreenState);
+            document.addEventListener('webkitfullscreenchange', syncFullscreenState);
+            syncFullscreenState();
+        });
+
+        // Also try fullscreen when user first touches the screen (more reliable on some devices)
+        document.addEventListener('touchstart', () => {
+            if (isMobileDevice() && !isFileProtocol) {
+                goFullscreen();
+            }
+        }, { once: true });
+
+        // And on first click as well (takes care of devices without touch)
+        document.addEventListener('click', () => {
+            if (isMobileDevice() && !isFileProtocol) {
+                goFullscreen();
+            }
+        }, { once: true });
+    </script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
     <script src="js/physics.js"></script>
     <script src="js/renderer.js"></script>

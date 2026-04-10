@@ -7,10 +7,12 @@ class PhysicsWorld {
         // Scene units are larger than real-world meters, so scale gravity for natural feel.
         this.gravityScale = 2.0;
         this.world.gravity.set(0, -20 * this.gravityScale, 0);
-        this.world.defaultContactMaterial.friction = 0.4;
-        this.world.defaultContactMaterial.restitution = 0.5;
-        this.world.solver.iterations = 10;
-        this.world.allowSleep = true;
+        this.world.defaultContactMaterial.friction = 0.28;
+        this.world.defaultContactMaterial.restitution = 0.12;
+        this.world.defaultContactMaterial.contactEquationRelaxation = 4;
+        this.world.defaultContactMaterial.contactEquationStiffness = 1e7;
+        this.world.solver.iterations = 14;
+        this.world.allowSleep = false;
         this.world.sleepSpeedLimit = 0.1;
 
         this.setupGround();
@@ -230,6 +232,23 @@ class PhysicsWorld {
             Math.random() * 1.5,
             (Math.random() - 0.5) * 4
         );
+    }
+
+    applySpawnIrregularities(body, strength = 1) {
+        const s = Math.max(0, strength);
+        body.angularVelocity.x += (Math.random() - 0.5) * 6 * s;
+        body.angularVelocity.y += (Math.random() - 0.5) * 4 * s;
+        body.angularVelocity.z += (Math.random() - 0.5) * 6 * s;
+
+        const tilt = 0.18 * s;
+        const q = new CANNON.Quaternion();
+        q.setFromEuler(
+            (Math.random() - 0.5) * tilt,
+            (Math.random() - 0.5) * Math.PI,
+            (Math.random() - 0.5) * tilt,
+            'XYZ'
+        );
+        body.quaternion = body.quaternion.mult(q);
     }
 
     reset() {

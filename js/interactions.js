@@ -65,8 +65,13 @@ class InteractionSystem {
         const size = parseFloat(document.getElementById('input-size')?.value) || 1;
         const dropHeight = this.getConfiguredDropHeight();
 
-        // Always drop from center of the ground.
-        const pos = new window.CANNON.Vec3(0, dropHeight, 0);
+        // Add slight spread so repeated drops are less perfectly stacked.
+        const spread = Math.max(0.4, size * 0.9);
+        const pos = new window.CANNON.Vec3(
+            (Math.random() - 0.5) * spread,
+            dropHeight,
+            (Math.random() - 0.5) * spread
+        );
         this.om.createObject(type, pos, mass, size);
 
         const inf = document.getElementById('selected-object-info');

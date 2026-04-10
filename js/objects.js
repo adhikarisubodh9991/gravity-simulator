@@ -72,6 +72,7 @@ class ObjectManager {
 
     createObject(type = 'sphere', position = null, customMass = null, sizeMultiplier = 1) {
         const shouldRandomizeVelocity = !position;
+        const hasExplicitSpawnPoint = !!position;
         
         // Default random position if not specified
         if (!position) {
@@ -180,6 +181,17 @@ class ObjectManager {
                 size = 2 * sizeMultiplier;
                 mass = customMass || 5;
                 physicsBody = this.physics.createSphereBody(position, size, mass, shouldRandomizeVelocity);
+        }
+
+        if (physicsBody && physicsBody.mass > 0) {
+            if (hasExplicitSpawnPoint) {
+                const spawnJitter = Math.max(0.12, size * 0.08);
+                physicsBody.position.x += (Math.random() - 0.5) * spawnJitter;
+                physicsBody.position.z += (Math.random() - 0.5) * spawnJitter;
+            }
+
+            const irregularityStrength = hasExplicitSpawnPoint ? 0.45 : 1;
+            this.physics.applySpawnIrregularities(physicsBody, irregularityStrength);
         }
 
         // Add body to world and create mesh
