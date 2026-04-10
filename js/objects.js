@@ -13,6 +13,8 @@ class ObjectManager {
         this.soundEnabled = true;
 
         this.destructionMode = false;
+        this.lastNukeDropTime = 0;
+        this.nukeCooldownMs = 3000;
 
         // things that fall off the map fade out nicely
         this.voidThreshold = -100;
@@ -313,6 +315,94 @@ class ObjectManager {
         this.voidThreshold = threshold;
     }
 
+    dropNuke(power = 500) {
+        const now = Date.now();
+        if (now - this.lastNukeDropTime < this.nukeCooldownMs) {
+            return false;
+        }
+
+        this.lastNukeDropTime = now;
+        const position = new CANNON.Vec3(
+            (Math.random() - 0.5) * 30,
+            100,
+            (Math.random() - 0.5) * 30
+        );
+
+        // Create nuke body
+        const nukeBody = new CANNON.Body({
+            mass: 20,
+            shape: new CANNON.Sphere(2),
+            linearDamping: 0.1,
+            angularDamping: 0.1
+        });
+
+        nukeBody.position.copy(position);
+        const bodyId = this.physics.addBody(nukeBody);
+
+        const mesh = this.renderer.createObjectMesh('nuke', 2, new THREE.Color(0xff9900));
+        mesh.position.copy(nukeBody.position);
+        this.renderer.addMesh(mesh);
+
+        this.objects.set(bodyId, {
+            mesh,
+            bodyId,
+            type: 'nuke',
+            color: new THREE.Color(0xff9900),
+            physicsBody: nukeBody,
+            mass: 20,
+            isNuke: true,
+            nukePower: power
+        });
+
+        // nuke explodes when it hits something hard enough
+        nukeBody.addEventListener('collide', (e) => {
+            const velocity = nukeBody.velocity.length();
+            if (velocity > 20) {
+                this.explodeNuke(bodyId, power);
+            }
+        });
+
+        console.log('Nuke dropped with power:', power);
+        return true;
+    }
+
+    getNukeCooldownRemainingMs() {
+        return Math.max(0, this.nukeCooldownMs - (Date.now() - this.lastNukeDropTime));
+    }
+
+    explodeNuke(bodyId, power) {
+        const obj = this.objects.get(bodyId);
+        if (!obj || obj.isNukeExploded) return;
+
+        obj.isNukeExploded = true;
+
+        const center = new CANNON.Vec3(
+            obj.physicsBody.position.x,
+            obj.physicsBody.position.y,
+            obj.physicsBody.position.z
+        );
+
+        // bigger explosion for more power
+        const radius = 40 + (power / 100);
+        const force = 300 + (power / 2);
+
+        this.physics.explosion(center, radius, force);
+
+        this.renderer.showExplosionEffect(
+            new THREE.Vector3(center.x, center.y, center.z),
+            radius
+        );
+
+        if (this.soundEnabled) {
+            this.playNukeExplosion(power);
+        }
+
+        // clean up nuke after explosion
+        setTimeout(() => {
+            this.removeObject(bodyId);
+        }, 100);
+    }
+
     // --- SOUND EFFECTS ---
 
     getRandomColor() {
@@ -376,6 +466,11 @@ class ObjectManager {
     playExplosionSound() {
         // simple explosion sound
         this.playSound(200, 0.3, 'sine');
+    }
+
+    playNukeExplosion(power) {
+        // simple nuke explosion sound
+        this.playSound(150, 0.4, 'sine');
     }
 
     playDestructionSound() {
