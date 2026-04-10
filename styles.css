@@ -61,6 +61,15 @@ body {
     -webkit-touch-callout: none;
 }
 
+.ui-panel {
+    padding-top: max(var(--spacing-lg), env(safe-area-inset-top));
+    padding-bottom: max(var(--spacing-lg), env(safe-area-inset-bottom));
+}
+
+.tray-handle {
+    left: calc(max(16px, env(safe-area-inset-left)) + 380px + 6px);
+}
+
 
 :-webkit-full-screen {
     width: 100vw !important;
@@ -159,6 +168,35 @@ body {
 
 .tray-handle:active {
     transform: translateY(-50%) scale(0.96);
+}
+
+.btn {
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.25);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn:focus-visible,
+.number-input:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-secondary) 80%, white 20%);
+    outline-offset: 1px;
+}
+
+.compact-help .stat-row {
+    padding: 5px 0;
+}
+
+.compact-help .stat-label {
+    min-width: 64px;
+    color: var(--color-secondary);
+    font-family: var(--font-mono);
 }
 
 
@@ -933,4 +971,13 @@ input:focus-visible {
     font-size: 0.9rem;
     color: #ff6b35;
     font-weight: 500;
+}
+
+body .ui-panel {
+    padding-top: max(var(--spacing-lg), env(safe-area-inset-top));
+    padding-bottom: max(var(--spacing-lg), env(safe-area-inset-bottom));
+}
+
+body .tray-handle {
+    left: calc(max(16px, env(safe-area-inset-left)) + 380px + 6px);
 }
