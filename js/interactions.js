@@ -32,13 +32,6 @@ class InteractionSystem {
         canvas.addEventListener('touchstart', e => this.onTouchStart(e), { passive: false });
         canvas.addEventListener('touchend', e => this.onTouchEnd(e));
         this.setupObjectDropButtons();
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key.toLowerCase() === 'd') {
-                this.om.toggleDestructionMode();
-                this.showNotification(this.om.destructionMode ? 'Destroy mode ON' : 'Destroy mode OFF', 1200);
-            }
-        });
     }
 
     setupObjectDropButtons() {
@@ -60,24 +53,27 @@ class InteractionSystem {
         return Math.max(10, Math.min(500, parsed));
     }
 
+    getConfiguredDropPosition() {
+        const inputX = parseFloat(document.getElementById('input-drop-x')?.value);
+        const inputZ = parseFloat(document.getElementById('input-drop-z')?.value);
+        const x = Number.isFinite(inputX) ? Math.max(-500, Math.min(500, inputX)) : 0;
+        const z = Number.isFinite(inputZ) ? Math.max(-500, Math.min(500, inputZ)) : 0;
+        return { x, z };
+    }
+
     dropObjectTypeFromHeight(type) {
         const mass = parseFloat(document.getElementById('input-mass')?.value) || 10;
         const size = parseFloat(document.getElementById('input-size')?.value) || 1;
         const dropHeight = this.getConfiguredDropHeight();
+        const dropPos = this.getConfiguredDropPosition();
 
-        // Add slight spread so repeated drops are less perfectly stacked.
-        const spread = Math.max(0.4, size * 0.9);
-        const pos = new window.CANNON.Vec3(
-            (Math.random() - 0.5) * spread,
-            dropHeight,
-            (Math.random() - 0.5) * spread
-        );
+        const pos = new window.CANNON.Vec3(dropPos.x, dropHeight, dropPos.z);
         this.om.createObject(type, pos, mass, size);
 
         const inf = document.getElementById('selected-object-info');
         const txt = document.getElementById('selected-object-text');
         if (inf && txt) {
-            txt.textContent = `Dropped: ${type} | Mass: ${mass}kg | Height: ${dropHeight}`;
+            txt.textContent = `Dropped: ${type} | Mass: ${mass}kg | X: ${dropPos.x.toFixed(1)} | Z: ${dropPos.z.toFixed(1)} | Height: ${dropHeight}`;
             inf.style.display = 'block';
         }
     }

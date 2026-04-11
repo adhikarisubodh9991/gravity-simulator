@@ -18,20 +18,20 @@
     <div class="ui-panel" id="control-tray">
         <div class="ui-header">
             <h1>Gravity Simulator</h1>
-            <p class="ui-subtitle">Interactive gravity sandbox</p>
+            <p class="ui-subtitle">3D physics sandbox</p>
         </div>
 
         <section class="ui-section">
             <h2 class="ui-section-title">Drop Objects</h2>
             <div class="button-grid">
-                <button id="btn-drop-sphere" class="btn btn-primary">⚪ Ball</button>
-                <button id="btn-drop-box" class="btn btn-primary">📦 Box</button>
-                <button id="btn-drop-cylinder" class="btn btn-primary">🔷 Cylinder</button>
-                <button id="btn-drop-cone" class="btn btn-primary">📍 Cone</button>
-                <button id="btn-drop-pyramid" class="btn btn-primary">🔺 Pyramid</button>
-                <button id="btn-drop-capsule" class="btn btn-primary">💊 Capsule</button>
-                <button id="btn-drop-torus" class="btn btn-primary">⭕ Torus</button>
-                <button id="btn-drop-icosahedron" class="btn btn-primary">✦ Icosahedron</button>
+                <button id="btn-drop-sphere" class="btn btn-primary">Ball</button>
+                <button id="btn-drop-box" class="btn btn-primary">Cube</button>
+                <button id="btn-drop-cylinder" class="btn btn-primary">Cylinder</button>
+                <button id="btn-drop-cone" class="btn btn-primary">Cone</button>
+                <button id="btn-drop-pyramid" class="btn btn-primary">Pyramid</button>
+                <button id="btn-drop-capsule" class="btn btn-primary">Capsule</button>
+                <button id="btn-drop-torus" class="btn btn-primary">Torus</button>
+                <button id="btn-drop-icosahedron" class="btn btn-primary">Icosahedron</button>
             </div>
             
             <div class="control-group">
@@ -49,14 +49,50 @@
                 <input type="number" id="input-drop-height" min="10" max="500" value="60" step="5" class="number-input">
             </div>
 
+            <div class="control-group">
+                <label class="control-label">Drop X Position</label>
+                <input type="number" id="input-drop-x" min="-500" max="500" value="0" step="1" class="number-input">
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Drop Z Position</label>
+                <input type="number" id="input-drop-z" min="-500" max="500" value="0" step="1" class="number-input">
+            </div>
+
             <div class="control-group" id="selected-object-info" style="display:none; margin-top: 12px; padding: 10px; background: rgba(0,212,255,0.2); border-radius: 6px; border-left: 3px solid #00d4ff;">
                 <p id="selected-object-text" style="margin: 0; font-size: 0.9rem; color: #00d4ff;">Object selected</p>
             </div>
         </section>
 
         <section class="ui-section">
-            <h2 class="ui-section-title">Physics</h2>
+            <h2 class="ui-section-title">Scene</h2>
+            <div class="button-grid">
+                <button id="btn-play-pause" class="btn btn-secondary">Pause</button>
+                <button id="btn-slow-motion" class="btn btn-secondary">Slow Motion</button>
+            </div>
             
+            <div class="control-group">
+                <label class="control-label">Nuke Power (50-1000)</label>
+                <input type="number" id="input-nuke-power" min="50" max="1000" value="500" step="50" class="number-input">
+            </div>
+            
+            <button id="btn-drop-nuke" class="btn btn-accent" style="width: 100%; margin-top: 8px;">Drop Nuke</button>
+            <button id="btn-toggle-destroy" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">Destruction Mode</button>
+            <button id="btn-clear-all" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">Clear All</button>
+        </section>
+    </div>
+
+    <button id="btn-toggle-ui" class="tray-handle" aria-expanded="true" aria-label="Toggle controls">❮</button>
+
+    <div class="ui-panel ui-panel-right" id="side-tray">
+        <div class="ui-header">
+            <h1>Environment</h1>
+            <p class="ui-subtitle">Physics and scene tuning</p>
+        </div>
+
+        <section class="ui-section">
+            <h2 class="ui-section-title">Physics</h2>
+
             <div class="control-group">
                 <label class="control-label">Gravity (m/s²)</label>
                 <input type="number" id="input-gravity" min="0" max="100" value="20" step="0.5" class="number-input">
@@ -64,18 +100,28 @@
 
             <div class="control-group">
                 <label class="control-label">Friction (0-1)</label>
-                <input type="number" id="input-friction" min="0" max="1" value="0.4" step="0.05" class="number-input">
+                <input type="number" id="input-friction" min="0" max="1" value="0.45" step="0.05" class="number-input">
             </div>
 
             <div class="control-group">
                 <label class="control-label">Restitution/Bounce (0-1)</label>
-                <input type="number" id="input-restitution" min="0" max="1" value="0.5" step="0.05" class="number-input">
+                <input type="number" id="input-restitution" min="0" max="1" value="0.08" step="0.05" class="number-input">
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Air Resistance (Linear)</label>
+                <input type="number" id="input-air-linear" min="0" max="1" value="0.06" step="0.01" class="number-input">
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Air Resistance (Angular)</label>
+                <input type="number" id="input-air-angular" min="0" max="1" value="0.08" step="0.01" class="number-input">
             </div>
         </section>
 
         <section class="ui-section">
-            <h2 class="ui-section-title">Environment</h2>
-            
+            <h2 class="ui-section-title">Bounds</h2>
+
             <div class="control-group">
                 <label class="control-label">Ground Width</label>
                 <input type="number" id="input-ground-width" min="200" max="1000" value="200" step="50" class="number-input">
@@ -90,25 +136,6 @@
                 <label class="control-label">Void Threshold</label>
                 <input type="number" id="input-void-threshold" min="-500" max="500" value="-300" step="10" class="number-input">
             </div>
-        </section>
-
-        <section class="ui-section">
-            <h2 class="ui-section-title">Scene</h2>
-            <div class="button-grid">
-                <button id="btn-play-pause" class="btn btn-secondary">⏸ Pause</button>
-                <button id="btn-slow-motion" class="btn btn-secondary">🐢 Slow-Mo</button>
-            </div>
-            <button id="btn-fullscreen" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">📱 Enter Fullscreen</button>
-            <small id="fullscreen-status" style="display:block; opacity:0.8; margin-top:6px;">Fullscreen: off</small>
-            
-            <div class="control-group">
-                <label class="control-label">Nuke Power (50-1000)</label>
-                <input type="number" id="input-nuke-power" min="50" max="1000" value="500" step="50" class="number-input">
-            </div>
-            
-            <button id="btn-drop-nuke" class="btn btn-accent" style="width: 100%; margin-top: 8px;">☢ Drop Nuke</button>
-            <button id="btn-toggle-destroy" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">💥 Destruction Mode</button>
-            <button id="btn-clear-all" class="btn btn-secondary" style="width: 100%; margin-top: 8px;">🗑 Clear All</button>
         </section>
 
         <section class="ui-section">
@@ -140,19 +167,9 @@
                 </div>
             </div>
         </section>
-
-        <section class="ui-section">
-            <h2 class="ui-section-title">Quick Shortcuts</h2>
-            <div class="stats-box compact-help">
-                <div class="stat-row"><span class="stat-label">Space</span><span class="stat-value">Play / Pause</span></div>
-                <div class="stat-row"><span class="stat-label">Shift</span><span class="stat-value">Hold Slow-Mo</span></div>
-                <div class="stat-row"><span class="stat-label">D</span><span class="stat-value">Destroy Mode</span></div>
-                <div class="stat-row"><span class="stat-label">Delete</span><span class="stat-value">Clear Scene</span></div>
-            </div>
-        </section>
     </div>
 
-    <button id="btn-toggle-ui" class="tray-handle" aria-expanded="true" aria-label="Toggle controls">❮</button>
+    <button id="btn-toggle-side" class="tray-handle tray-handle-right" aria-expanded="true" aria-label="Toggle environment panel">❯</button>
 
 
 
@@ -203,22 +220,6 @@
             }
         };
 
-        const exitFullscreen = async () => {
-            try {
-                if (document.exitFullscreen) {
-                    await document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    await document.webkitExitFullscreen();
-                }
-            } catch (error) {
-                // Keep running in current mode if exit fails.
-            }
-        };
-
-        const isFullscreenActive = () => {
-            return !!(document.fullscreenElement || document.webkitFullscreenElement);
-        };
-
         // Lock orientation and attempt fullscreen when the page loads
         window.addEventListener('load', () => {
             lockLandscapeOrientation();
@@ -227,29 +228,6 @@
             if (isMobileDevice() && !isFileProtocol) {
                 setTimeout(goFullscreen, 500);
             }
-
-            const fsBtn = document.getElementById('btn-fullscreen');
-            const fsStatus = document.getElementById('fullscreen-status');
-            const syncFullscreenState = () => {
-                const active = isFullscreenActive();
-                fsBtn.textContent = active ? '📱 Exit Fullscreen' : '📱 Enter Fullscreen';
-                fsStatus.textContent = isFileProtocol
-                    ? 'Fullscreen: unavailable on file://'
-                    : `Fullscreen: ${active ? 'on' : 'off'}`;
-            };
-
-            fsBtn.addEventListener('click', async () => {
-                if (isFullscreenActive()) {
-                    await exitFullscreen();
-                } else {
-                    await goFullscreen();
-                }
-                syncFullscreenState();
-            });
-
-            document.addEventListener('fullscreenchange', syncFullscreenState);
-            document.addEventListener('webkitfullscreenchange', syncFullscreenState);
-            syncFullscreenState();
         });
 
         // Also try fullscreen when user first touches the screen (more reliable on some devices)
@@ -282,11 +260,20 @@
 
         const tray = document.getElementById('control-tray');
         const trayToggle = document.getElementById('btn-toggle-ui');
+        const sideTray = document.getElementById('side-tray');
+        const sideToggle = document.getElementById('btn-toggle-side');
         trayToggle.addEventListener('click', () => {
             tray.classList.toggle('collapsed');
             const expanded = !tray.classList.contains('collapsed');
             trayToggle.textContent = expanded ? '❮' : '❯';
             trayToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        });
+
+        sideToggle.addEventListener('click', () => {
+            sideTray.classList.toggle('collapsed');
+            const expanded = !sideTray.classList.contains('collapsed');
+            sideToggle.textContent = expanded ? '❯' : '❮';
+            sideToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
         });
 
         renderer.setZoomSensitivity(3);
@@ -351,6 +338,18 @@
             physics.setRestitution(restitution);
         });
 
+        document.getElementById('input-air-linear').addEventListener('change', (e) => {
+            const linear = parseFloat(e.target.value);
+            const angular = parseFloat(document.getElementById('input-air-angular').value);
+            physics.setAirResistance(linear, angular);
+        });
+
+        document.getElementById('input-air-angular').addEventListener('change', (e) => {
+            const angular = parseFloat(e.target.value);
+            const linear = parseFloat(document.getElementById('input-air-linear').value);
+            physics.setAirResistance(linear, angular);
+        });
+
         // Ground dimensions
         document.getElementById('input-ground-width').addEventListener('change', (e) => {
             const width = parseFloat(e.target.value);
@@ -371,23 +370,9 @@
         });
 
 
-        const nukeBtn = document.getElementById('btn-drop-nuke');
-        nukeBtn.addEventListener('click', () => {
+        document.getElementById('btn-drop-nuke').addEventListener('click', () => {
             const power = parseFloat(document.getElementById('input-nuke-power').value);
-            const dropped = objectManager.dropNuke(power);
-            if (!dropped) {
-                const remaining = Math.ceil(objectManager.getNukeCooldownRemainingMs() / 1000);
-                ui.notify(`Nuke cooling down: ${remaining}s`, 1200);
-                return;
-            }
-
-            nukeBtn.disabled = true;
-            nukeBtn.textContent = '☢ Cooling...';
-            ui.notify('Nuke deployed', 1000);
-            setTimeout(() => {
-                nukeBtn.disabled = false;
-                nukeBtn.textContent = '☢ Drop Nuke';
-            }, objectManager.nukeCooldownMs);
+            objectManager.dropNuke(power);
         });
 
         document.getElementById('btn-toggle-destroy').addEventListener('click', () => {
@@ -398,6 +383,12 @@
         document.getElementById('toggle-sound').addEventListener('change', (e) => {
             objectManager.setSoundEnabled(e.target.checked);
         });
+
+        // Initialize dynamic damping from configured controls on load.
+        physics.setAirResistance(
+            parseFloat(document.getElementById('input-air-linear').value),
+            parseFloat(document.getElementById('input-air-angular').value)
+        );
 
         // Keyboard shortcuts
         window.addEventListener('keydown', (e) => {

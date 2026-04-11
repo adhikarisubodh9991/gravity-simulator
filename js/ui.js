@@ -33,20 +33,20 @@ class UIController {
 
     updatePlayPauseButton(isRunning) {
         if (isRunning) {
-            this.els.play.textContent = '⏸ Pause';
+            this.els.play.textContent = 'Pause';
             this.els.play.style.opacity = '1';
         } else {
-            this.els.play.textContent = '▶ Play';
+            this.els.play.textContent = 'Play';
             this.els.play.style.opacity = '0.7';
         }
     }
 
     updateSlowMoButton(isSlowMo) {
         if (isSlowMo) {
-            this.els.slowMo.textContent = '⏩ Normal Speed';
+            this.els.slowMo.textContent = 'Normal Speed';
             this.els.slowMo.style.opacity = '1';
         } else {
-            this.els.slowMo.textContent = '🐢 Slow-Mo';
+            this.els.slowMo.textContent = 'Slow Motion';
             this.els.slowMo.style.opacity = '0.7';
         }
     }
@@ -54,11 +54,11 @@ class UIController {
     updateDestructionModeButton(enabled) {
         const btn = document.getElementById('btn-toggle-destroy');
         if (enabled) {
-            btn.textContent = '💥 Destroy Mode (ON)';
+            btn.textContent = 'Destroy Mode (ON)';
             btn.style.background = '#ff3366';
             btn.style.borderColor = '#ff3366';
         } else {
-            btn.textContent = '💥 Destruction Mode';
+            btn.textContent = 'Destruction Mode';
             btn.style.background = 'transparent';
             btn.style.borderColor = '#00d4ff';
         }
@@ -105,20 +105,20 @@ class UIController {
 
     reset() {
         this.elements.sliderGravity.value = 20;
-        this.elements.sliderFriction.value = 0.4;
-        this.elements.sliderRestitution.value = 0.5;
+        this.elements.sliderFriction.value = 0.45;
+        this.elements.sliderRestitution.value = 0.08;
         this.elements.toggleSound.checked = true;
 
         this.elements.displayGravity.textContent = '20';
-        this.elements.displayFriction.textContent = '0.40';
-        this.elements.displayRestitution.textContent = '0.50';
+        this.elements.displayFriction.textContent = '0.45';
+        this.elements.displayRestitution.textContent = '0.08';
 
         this.updatePlayPauseButton(true);
         this.updateSlowMoButton(false);
 
         this.physics.setGravity(20);
-        this.physics.setFriction(0.4);
-        this.physics.setRestitution(0.5);
+        this.physics.setFriction(0.45);
+        this.physics.setRestitution(0.08);
     }
 }
 

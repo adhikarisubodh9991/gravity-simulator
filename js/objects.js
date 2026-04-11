@@ -13,11 +13,9 @@ class ObjectManager {
         this.soundEnabled = true;
 
         this.destructionMode = false;
-        this.lastNukeDropTime = 0;
-        this.nukeCooldownMs = 3000;
 
-        // things that fall off the map fade out nicely
-        this.voidThreshold = -100;
+        // things that fall off the map should actually drop into the void
+        this.voidThreshold = -300;
         this.fadingObjects = new Map();
 
         // Audio throttling - prevent collision sound spam causing glitching
@@ -95,7 +93,7 @@ class ObjectManager {
             case 'box':
                 size = 2 * sizeMultiplier;
                 mass = customMass || 10;
-                const halfExtents = new CANNON.Vec3(size / 2, size * 0.35, size / 2);
+                const halfExtents = new CANNON.Vec3(size / 2, size / 2, size / 2);
                 physicsBody = this.physics.createBoxBody(position, halfExtents, mass, shouldRandomizeVelocity);
                 break;
 
@@ -184,24 +182,44 @@ class ObjectManager {
         }
 
         if (physicsBody && physicsBody.mass > 0) {
-            if (hasExplicitSpawnPoint) {
-                const spawnJitter = Math.max(0.12, size * 0.08);
-                physicsBody.position.x += (Math.random() - 0.5) * spawnJitter;
-                physicsBody.position.z += (Math.random() - 0.5) * spawnJitter;
+            const shapeDamping = {
+                sphere: { linear: 0.09, angular: 0.14 },
+                box: { linear: 0.1, angular: 0.18 },
+                cylinder: { linear: 0.12, angular: 0.24 },
+                cone: { linear: 0.12, angular: 0.24 },
+                pyramid: { linear: 0.13, angular: 0.26 },
+                capsule: { linear: 0.12, angular: 0.24 },
+                torus: { linear: 0.14, angular: 0.3 },
+                icosahedron: { linear: 0.11, angular: 0.2 }
+            };
+            const tuned = shapeDamping[type];
+            if (tuned) {
+                physicsBody.linearDamping = tuned.linear;
+                physicsBody.angularDamping = tuned.angular;
             }
 
-            const irregularityStrength = hasExplicitSpawnPoint ? 0.45 : 1;
+            const irregularityStrength = hasExplicitSpawnPoint
+                ? (type === 'torus' ? 0.02 : type === 'sphere' ? 0.05 : 0.12)
+                : 0.45;
             this.physics.applySpawnIrregularities(physicsBody, irregularityStrength);
         }
 
         // Add body to world and create mesh
         const bodyId = this.physics.addBody(physicsBody);
         const mesh = this.renderer.createObjectMesh(type, size, color);
+        let meshQuatOffset = null;
+        if (type === 'cylinder' || type === 'capsule') {
+            meshQuatOffset = new THREE.Quaternion();
+            meshQuatOffset.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
+        }
         mesh.position.copy(physicsBody.position);
         mesh.quaternion.copy(physicsBody.quaternion);
+        if (meshQuatOffset) {
+            mesh.quaternion.multiply(meshQuatOffset);
+        }
         this.renderer.addMesh(mesh);
 
-        this.objects.set(bodyId, { mesh, bodyId, type, color, physicsBody, mass });
+        this.objects.set(bodyId, { mesh, bodyId, type, color, physicsBody, mass, meshQuatOffset });
 
         // Sound on impact
         physicsBody.addEventListener('collide', (e) => {
@@ -219,6 +237,9 @@ class ObjectManager {
             if (obj.physicsBody && obj.mesh) {
                 obj.mesh.position.copy(obj.physicsBody.position);
                 obj.mesh.quaternion.copy(obj.physicsBody.quaternion);
+                if (obj.meshQuatOffset) {
+                    obj.mesh.quaternion.multiply(obj.meshQuatOffset);
+                }
             }
         }
 
@@ -235,7 +256,11 @@ class ObjectManager {
             if (!obj.physicsBody || !obj.mesh) continue;
             
             const p = obj.physicsBody.position;
-            const outside = Math.abs(p.x) > bx || Math.abs(p.z) > bz || p.y < this.voidThreshold;
+            const outsideX = Math.abs(p.x) > bx;
+            const outsideZ = Math.abs(p.z) > bz;
+            const escapedArena = outsideX || outsideZ;
+            const belowVoid = p.y < this.voidThreshold;
+            const outside = escapedArena || belowVoid;
             
             if (outside) {
                 // Start fading
@@ -243,12 +268,25 @@ class ObjectManager {
                     const startOp = Array.isArray(obj.mesh.material)
                         ? (obj.mesh.material[0]?.opacity || 1)
                         : (obj.mesh.material?.opacity || 1);
-                    this.fadingObjects.set(id, { startTime: Date.now(), duration: 1500, startOpacity: startOp });
+                    this.fadingObjects.set(id, { startTime: Date.now(), duration: 1700, startOpacity: startOp });
+
+                    // Once object leaves arena bounds, disable collisions so it truly falls into void.
+                    if (escapedArena) {
+                        obj.physicsBody.collisionResponse = false;
+                        obj.physicsBody.collisionFilterMask = 0;
+                        obj.physicsBody.velocity.y = Math.min(obj.physicsBody.velocity.y, -20);
+                    }
                 }
                 
                 const info = this.fadingObjects.get(id);
                 const elapsed = Date.now() - info.startTime;
                 const progress = Math.min(elapsed / info.duration, 1);
+
+                if (escapedArena) {
+                    obj.physicsBody.velocity.y = Math.min(obj.physicsBody.velocity.y, -28 - progress * 52);
+                    obj.physicsBody.angularVelocity.x += 0.03;
+                    obj.physicsBody.angularVelocity.z += 0.02;
+                }
                 
                 if (obj.mesh.material) {
                     if (Array.isArray(obj.mesh.material)) {
@@ -258,8 +296,10 @@ class ObjectManager {
                         obj.mesh.material.transparent = true;
                     }
                 }
+
+                const scale = 1 - progress * 0.24;
+                obj.mesh.scale.setScalar(Math.max(0.55, scale));
                 
-                obj.physicsBody.velocity.y = Math.min(obj.physicsBody.velocity.y, -100 * progress);
                 if (progress >= 1) toRemove.push(id);
             } else {
                 // Restore if was fading
@@ -272,6 +312,9 @@ class ObjectManager {
                             obj.mesh.material.opacity = info.startOpacity;
                         }
                     }
+                    obj.physicsBody.collisionResponse = true;
+                    obj.physicsBody.collisionFilterMask = -1;
+                    obj.mesh.scale.set(1, 1, 1);
                     this.fadingObjects.delete(id);
                 }
             }
@@ -328,12 +371,6 @@ class ObjectManager {
     }
 
     dropNuke(power = 500) {
-        const now = Date.now();
-        if (now - this.lastNukeDropTime < this.nukeCooldownMs) {
-            return false;
-        }
-
-        this.lastNukeDropTime = now;
         const position = new CANNON.Vec3(
             (Math.random() - 0.5) * 30,
             100,
@@ -375,11 +412,6 @@ class ObjectManager {
         });
 
         console.log('Nuke dropped with power:', power);
-        return true;
-    }
-
-    getNukeCooldownRemainingMs() {
-        return Math.max(0, this.nukeCooldownMs - (Date.now() - this.lastNukeDropTime));
     }
 
     explodeNuke(bodyId, power) {

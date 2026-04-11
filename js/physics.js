@@ -7,13 +7,17 @@ class PhysicsWorld {
         // Scene units are larger than real-world meters, so scale gravity for natural feel.
         this.gravityScale = 2.0;
         this.world.gravity.set(0, -20 * this.gravityScale, 0);
-        this.world.defaultContactMaterial.friction = 0.28;
-        this.world.defaultContactMaterial.restitution = 0.12;
+        this.world.defaultContactMaterial.friction = 0.55;
+        this.world.defaultContactMaterial.restitution = 0.08;
         this.world.defaultContactMaterial.contactEquationRelaxation = 4;
         this.world.defaultContactMaterial.contactEquationStiffness = 1e7;
         this.world.solver.iterations = 14;
         this.world.allowSleep = false;
         this.world.sleepSpeedLimit = 0.1;
+        this.defaultLinearDamping = 0.08;
+        this.defaultAngularDamping = 0.12;
+        this.idleLinearThreshold = 0.2;
+        this.idleAngularThreshold = 0.22;
 
         this.setupGround();
         this.bodies = new Map();
@@ -54,6 +58,19 @@ class PhysicsWorld {
     step(deltaTime) {
         const dt = Math.min(Math.max(deltaTime, 0), 0.05);
         this.world.step(this.fixedTimeStep, dt, 5);
+
+        // Apply gentle settling on low-speed bodies so they stop gliding forever.
+        for (let [, body] of this.bodies) {
+            if (!body || body.mass <= 0) continue;
+            if (body.position.y > -22.5) continue;
+
+            const v = body.velocity.length();
+            const av = body.angularVelocity.length();
+            if (v < this.idleLinearThreshold && av < this.idleAngularThreshold) {
+                body.velocity.set(0, 0, 0);
+                body.angularVelocity.set(0, 0, 0);
+            }
+        }
     }
 
     setGravity(strength) {
@@ -93,8 +110,8 @@ class PhysicsWorld {
         const body = new CANNON.Body({
             mass,
             shape: new CANNON.Sphere(radius),
-            linearDamping: 0.02,
-            angularDamping: 0.02
+            linearDamping: this.defaultLinearDamping,
+            angularDamping: this.defaultAngularDamping
         });
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
@@ -105,8 +122,8 @@ class PhysicsWorld {
         const body = new CANNON.Body({
             mass,
             shape: new CANNON.Box(halfExtents),
-            linearDamping: 0.02,
-            angularDamping: 0.02
+            linearDamping: this.defaultLinearDamping,
+            angularDamping: this.defaultAngularDamping
         });
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
@@ -114,41 +131,65 @@ class PhysicsWorld {
     }
 
     createCylinderBody(position, radius = 2, height = 5, mass = 8, randomize = true) {
-        // Note: Cannon supports spheres natively, cylinders are approximated
-        const body = new CANNON.Body({ mass, shape: new CANNON.Sphere(radius), linearDamping: 0.02, angularDamping: 0.02 });
+        const coreLength = Math.max(0.6, height - radius * 0.9);
+        const cylinder = new CANNON.Cylinder(radius, radius, coreLength, 16);
+        const body = new CANNON.Body({ mass, linearDamping: this.defaultLinearDamping, angularDamping: this.defaultAngularDamping });
+        body.addShape(cylinder);
+        // Rounded endcaps make vertical standing unstable and encourage realistic rolling.
+        body.addShape(new CANNON.Sphere(radius), new CANNON.Vec3(coreLength / 2, 0, 0));
+        body.addShape(new CANNON.Sphere(radius), new CANNON.Vec3(-coreLength / 2, 0, 0));
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
         return body;
     }
 
     createConeBody(position, radius = 2, height = 5, mass = 6, randomize = true) {
-        // Cone is also approximated as a sphere
-        const body = new CANNON.Body({ mass, shape: new CANNON.Sphere(radius * 0.8), linearDamping: 0.02, angularDamping: 0.02 });
+        const cone = new CANNON.Cylinder(Math.max(0.06, radius * 0.08), radius, height, 16);
+        const body = new CANNON.Body({ mass, linearDamping: this.defaultLinearDamping, angularDamping: this.defaultAngularDamping });
+        const alignY = new CANNON.Quaternion();
+        alignY.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.PI / 2);
+        body.addShape(cone, new CANNON.Vec3(0, 0, 0), alignY);
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
         return body;
     }
 
     createPyramidBody(position, size = 3, mass = 8, randomize = true) {
-        // Use a box to approximate pyramid shape
-        const extents = new CANNON.Vec3(size / 2, size, size / 2);
-        const body = new CANNON.Body({ mass, shape: new CANNON.Box(extents), linearDamping: 0.02, angularDamping: 0.02 });
+        const radius = size / 2;
+        const height = size;
+        const pyramid = new CANNON.Cylinder(Math.max(0.04, radius * 0.08), radius, height, 4);
+        const body = new CANNON.Body({ mass, linearDamping: this.defaultLinearDamping, angularDamping: this.defaultAngularDamping });
+        const alignY = new CANNON.Quaternion();
+        alignY.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.PI / 2);
+        body.addShape(pyramid, new CANNON.Vec3(0, 0, 0), alignY);
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
         return body;
     }
 
     createCapsuleBody(position, radius = 1.5, length = 4, mass = 7, randomize = true) {
-        // Simplified as sphere
-        const body = new CANNON.Body({ mass, shape: new CANNON.Sphere(radius), linearDamping: 0.02, angularDamping: 0.02 });
+        const body = new CANNON.Body({ mass, linearDamping: this.defaultLinearDamping, angularDamping: this.defaultAngularDamping });
+        const coreLength = Math.max(0.2, length - radius * 2);
+        const cylinder = new CANNON.Cylinder(radius, radius, coreLength, 14);
+        body.addShape(cylinder, new CANNON.Vec3(0, 0, 0));
+        body.addShape(new CANNON.Sphere(radius), new CANNON.Vec3(coreLength / 2, 0, 0));
+        body.addShape(new CANNON.Sphere(radius), new CANNON.Vec3(-coreLength / 2, 0, 0));
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
         return body;
     }
 
     createTorusBody(position, radius = 3, tubeRadius = 0.8, mass = 5, randomize = true) {
-        // Torus as sphere approximation
-        const body = new CANNON.Body({ mass, shape: new CANNON.Sphere(radius * 0.7), linearDamping: 0.02, angularDamping: 0.02 });
+        // Build torus as a ring of spheres so it rolls instead of balancing upright.
+        const body = new CANNON.Body({ mass, linearDamping: 0.12, angularDamping: 0.34 });
+        const segments = 14;
+        const nodeRadius = Math.max(0.22, tubeRadius * 0.92);
+        for (let i = 0; i < segments; i++) {
+            const a = (i / segments) * Math.PI * 2;
+            const x = Math.cos(a) * radius;
+            const z = Math.sin(a) * radius;
+            body.addShape(new CANNON.Sphere(nodeRadius), new CANNON.Vec3(x, 0, z));
+        }
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
         return body;
@@ -156,10 +197,21 @@ class PhysicsWorld {
 
     createIcosahedronBody(position, size = 2, mass = 8, randomize = true) {
         // Icosa is complex, use sphere
-        const body = new CANNON.Body({ mass, shape: new CANNON.Sphere(size), linearDamping: 0.02, angularDamping: 0.02 });
+        const body = new CANNON.Body({ mass, shape: new CANNON.Sphere(size), linearDamping: this.defaultLinearDamping, angularDamping: this.defaultAngularDamping });
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
         return body;
+    }
+
+    setAirResistance(linear, angular) {
+        this.defaultLinearDamping = Math.max(0, Math.min(1, Number(linear) || 0));
+        this.defaultAngularDamping = Math.max(0, Math.min(1, Number(angular) || 0));
+
+        for (let [, body] of this.bodies) {
+            if (!body || body.mass <= 0) continue;
+            body.linearDamping = this.defaultLinearDamping;
+            body.angularDamping = this.defaultAngularDamping;
+        }
     }
 
     explosion(center, radius, force) {
