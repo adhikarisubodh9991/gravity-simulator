@@ -171,6 +171,14 @@
 
     <button id="btn-toggle-side" class="tray-handle tray-handle-right" aria-expanded="true" aria-label="Toggle environment panel">❯</button>
 
+    <div class="rotate-overlay" id="rotate-overlay">
+        <div class="rotate-card">
+            <div class="rotate-title">Gravity Simulator</div>
+            <div class="rotate-text">Please rotate your device</div>
+            <div class="rotate-subtext">Use landscape mode for full scene view and controls.</div>
+        </div>
+    </div>
+
 
 
     <!-- Three.js -->
@@ -262,11 +270,33 @@
         const trayToggle = document.getElementById('btn-toggle-ui');
         const sideTray = document.getElementById('side-tray');
         const sideToggle = document.getElementById('btn-toggle-side');
+
+        function syncTrayHandles() {
+            const root = document.documentElement;
+
+            trayToggle.style.left = tray.classList.contains('collapsed')
+                ? '8px'
+                : '';
+            trayToggle.style.right = '';
+
+            sideToggle.style.left = 'auto';
+            sideToggle.style.right = sideTray.classList.contains('collapsed')
+                ? '8px'
+                : '';
+
+            // Keep canvas rendering full width and let panels overlay it.
+            root.style.setProperty('--canvas-left-gutter', '0px');
+            root.style.setProperty('--canvas-right-gutter', '0px');
+
+            renderer.onWindowResize();
+        }
+
         trayToggle.addEventListener('click', () => {
             tray.classList.toggle('collapsed');
             const expanded = !tray.classList.contains('collapsed');
             trayToggle.textContent = expanded ? '❮' : '❯';
             trayToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            syncTrayHandles();
         });
 
         sideToggle.addEventListener('click', () => {
@@ -274,7 +304,12 @@
             const expanded = !sideTray.classList.contains('collapsed');
             sideToggle.textContent = expanded ? '❯' : '❮';
             sideToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            syncTrayHandles();
         });
+
+        window.addEventListener('resize', syncTrayHandles);
+        document.addEventListener('fullscreenchange', syncTrayHandles);
+        syncTrayHandles();
 
         renderer.setZoomSensitivity(3);
 

@@ -97,6 +97,9 @@ npx serve .
 - Physics runs at a fixed timestep and rendering runs via requestAnimationFrame.
 - Damping and low-speed settling are used to reduce endless micro-sliding.
 - Torus uses a ring-style collider so it rolls naturally instead of balancing upright.
+- Mobile rendering keeps full-width canvas active; portrait mode now shows a non-blocking rotate hint instead of hiding the scene.
+- Renderer resize now follows actual canvas bounds (`getBoundingClientRect`) and preserves CSS sizing to avoid half-width mobile rendering artifacts.
+- Portrait mobile flow now matches Universe Simulator: app shows a dedicated rotate overlay and only runs full scene UI in landscape.
 
 ## Known Limitations
 

@@ -107,7 +107,7 @@ class ThreeRenderer {
         const height = canvas.clientHeight;
         
         // Set renderer size and pixel ratio for proper mobile rendering
-        this.renderer.setSize(width, height);
+        this.renderer.setSize(width, height, false);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         
         // Set viewport to match canvas dimensions (important for proper camera frustum)
@@ -118,9 +118,10 @@ class ThreeRenderer {
         
         // Handle window resize and orientation changes
         const updateCanvasSize = () => {
-            const newWidth = canvas.clientWidth;
-            const newHeight = canvas.clientHeight;
-            this.renderer.setSize(newWidth, newHeight);
+            const rect = canvas.getBoundingClientRect();
+            const newWidth = Math.max(1, Math.floor(rect.width));
+            const newHeight = Math.max(1, Math.floor(rect.height));
+            this.renderer.setSize(newWidth, newHeight, false);
             this.renderer.setViewport(0, 0, newWidth, newHeight);
             this.camera.aspect = newWidth / newHeight;
             this.camera.updateProjectionMatrix();
@@ -500,12 +501,17 @@ class ThreeRenderer {
     }
 
     onWindowResize() {
-        const width = window.innerWidth;
-        const height = window.innerHeight;
+        const canvas = this.renderer.domElement;
+        const rect = canvas.getBoundingClientRect();
+        const width = Math.max(1, Math.floor(rect.width));
+        const height = Math.max(1, Math.floor(rect.height));
+
+        if (width <= 0 || height <= 0) return;
 
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(width, height);
+        this.renderer.setSize(width, height, false);
+        this.renderer.setViewport(0, 0, width, height);
     }
 
     /**
@@ -554,9 +560,14 @@ class ThreeRenderer {
     getWorldPositionFromMouse(x, y) {
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
+        const canvas = this.renderer.domElement;
+        const rect = canvas.getBoundingClientRect();
 
-        mouse.x = (x / window.innerWidth) * 2 - 1;
-        mouse.y = -(y / window.innerHeight) * 2 + 1;
+        const localX = x - rect.left;
+        const localY = y - rect.top;
+
+        mouse.x = (localX / rect.width) * 2 - 1;
+        mouse.y = -(localY / rect.height) * 2 + 1;
 
         raycaster.setFromCamera(mouse, this.camera);
 
