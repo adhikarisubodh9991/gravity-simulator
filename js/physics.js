@@ -10,14 +10,16 @@ class PhysicsWorld {
         this.world.defaultContactMaterial.friction = 0.55;
         this.world.defaultContactMaterial.restitution = 0.08;
         this.world.defaultContactMaterial.contactEquationRelaxation = 4;
-        this.world.defaultContactMaterial.contactEquationStiffness = 1e7;
-        this.world.solver.iterations = 14;
+        this.world.defaultContactMaterial.contactEquationStiffness = 3e7;
+        this.world.solver.iterations = 20;
         this.world.allowSleep = false;
         this.world.sleepSpeedLimit = 0.1;
         this.defaultLinearDamping = 0.08;
         this.defaultAngularDamping = 0.12;
         this.idleLinearThreshold = 0.2;
         this.idleAngularThreshold = 0.22;
+        this.maxSubSteps = 8;
+        this.groundPenetrationSlop = 0.015;
 
         this.setupGround();
         this.bodies = new Map();
@@ -57,11 +59,25 @@ class PhysicsWorld {
 
     step(deltaTime) {
         const dt = Math.min(Math.max(deltaTime, 0), 0.05);
-        this.world.step(this.fixedTimeStep, dt, 5);
+        this.world.step(this.fixedTimeStep, dt, this.maxSubSteps);
+
+        const groundY = this.groundBody ? this.groundBody.position.y : -25;
 
         // Apply gentle settling on low-speed bodies so they stop gliding forever.
         for (let [, body] of this.bodies) {
             if (!body || body.mass <= 0) continue;
+
+            // Ignore out-of-bounds bodies that intentionally have collisions disabled.
+            if (body.collisionResponse === false || body.collisionFilterMask === 0) continue;
+
+            // Heavy bodies can tunnel in a single step; project them back above the plane.
+            body.computeAABB();
+            if (body.aabb && body.aabb.lowerBound.y < (groundY - this.groundPenetrationSlop)) {
+                const correction = (groundY - body.aabb.lowerBound.y) + this.groundPenetrationSlop;
+                body.position.y += correction;
+                if (body.velocity.y < 0) body.velocity.y = 0;
+            }
+
             if (body.position.y > -22.5) continue;
 
             const v = body.velocity.length();
