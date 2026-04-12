@@ -443,7 +443,14 @@
         });
 
 
-        document.getElementById('btn-drop-nuke').addEventListener('click', () => {
+        const nukeBtn = document.getElementById('btn-drop-nuke');
+        let lastNukeDropAt = 0;
+        nukeBtn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            const now = Date.now();
+            if (now - lastNukeDropAt < 120) return;
+            lastNukeDropAt = now;
+
             const power = parseFloat(document.getElementById('input-nuke-power').value);
             objectManager.dropNuke(power);
         });

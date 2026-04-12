@@ -17,6 +17,7 @@ class ObjectManager {
         // things that fall off the map should actually drop into the void
         this.voidThreshold = -300;
         this.fadingObjects = new Map();
+        this.nukeFuseTimers = new Map();
 
         // Audio throttling - prevent collision sound spam causing glitching
         this.lastCollisionSoundTime = 0;
@@ -185,11 +186,11 @@ class ObjectManager {
             const shapeDamping = {
                 sphere: { linear: 0.09, angular: 0.14 },
                 box: { linear: 0.1, angular: 0.18 },
-                cylinder: { linear: 0.12, angular: 0.24 },
-                cone: { linear: 0.12, angular: 0.24 },
-                pyramid: { linear: 0.13, angular: 0.26 },
+                cylinder: { linear: 0.16, angular: 0.3 },
+                cone: { linear: 0.22, angular: 0.48 },
+                pyramid: { linear: 0.24, angular: 0.52 },
                 capsule: { linear: 0.12, angular: 0.24 },
-                torus: { linear: 0.14, angular: 0.3 },
+                torus: { linear: 0.22, angular: 0.5 },
                 icosahedron: { linear: 0.11, angular: 0.2 }
             };
             const tuned = shapeDamping[type];
@@ -198,8 +199,19 @@ class ObjectManager {
                 physicsBody.angularDamping = tuned.angular;
             }
 
+            const irregularityByType = {
+                torus: 0.01,
+                cylinder: 0.02,
+                cone: 0.015,
+                pyramid: 0.015,
+                capsule: 0.03,
+                sphere: 0.05,
+                box: 0.04,
+                icosahedron: 0.04
+            };
+
             const irregularityStrength = hasExplicitSpawnPoint
-                ? (type === 'torus' ? 0.02 : type === 'sphere' ? 0.05 : 0.12)
+                ? (irregularityByType[type] ?? 0.03)
                 : 0.45;
             this.physics.applySpawnIrregularities(physicsBody, irregularityStrength);
         }
@@ -211,6 +223,9 @@ class ObjectManager {
         if (type === 'cylinder' || type === 'capsule') {
             meshQuatOffset = new THREE.Quaternion();
             meshQuatOffset.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
+        } else if (type === 'torus') {
+            meshQuatOffset = new THREE.Quaternion();
+            meshQuatOffset.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
         }
         mesh.position.copy(physicsBody.position);
         mesh.quaternion.copy(physicsBody.quaternion);
@@ -329,6 +344,11 @@ class ObjectManager {
     removeObject(bodyId) {
         const obj = this.objects.get(bodyId);
         if (obj) {
+            const fuse = this.nukeFuseTimers.get(bodyId);
+            if (fuse) {
+                clearTimeout(fuse);
+                this.nukeFuseTimers.delete(bodyId);
+            }
             this.physics.removeBody(bodyId);
             this.renderer.removeMesh(obj.mesh);
             this.objects.delete(bodyId);
@@ -370,6 +390,31 @@ class ObjectManager {
         this.voidThreshold = threshold;
     }
 
+    scheduleNukeFailsafe(bodyId, power, delayMs = 6500) {
+        const timer = setTimeout(() => {
+            const obj = this.objects.get(bodyId);
+            if (!obj || obj.isNukeExploded) {
+                this.nukeFuseTimers.delete(bodyId);
+                return;
+            }
+
+            const groundY = this.physics.groundBody ? this.physics.groundBody.position.y : -25;
+            const y = obj.physicsBody.position.y;
+            const speed = obj.physicsBody.velocity.length();
+
+            // If close to ground (or nearly settled), force detonation.
+            if (y <= groundY + 3 || speed < 1.2) {
+                this.explodeNuke(bodyId, power);
+                return;
+            }
+
+            // Still airborne, keep waiting without exploding mid-air.
+            this.scheduleNukeFailsafe(bodyId, power, 1800);
+        }, delayMs);
+
+        this.nukeFuseTimers.set(bodyId, timer);
+    }
+
     dropNuke(power = 500) {
         const position = new CANNON.Vec3(
             (Math.random() - 0.5) * 30,
@@ -400,13 +445,30 @@ class ObjectManager {
             physicsBody: nukeBody,
             mass: 20,
             isNuke: true,
-            nukePower: power
+            nukePower: power,
+            isNukeArmed: false,
+            nukeCreatedAt: Date.now()
         });
 
-        // nuke explodes when it hits something hard enough
+        // Brief arming delay avoids accidental immediate trigger during spawn jitter.
+        setTimeout(() => {
+            const nukeObj = this.objects.get(bodyId);
+            if (nukeObj && nukeObj.isNuke && !nukeObj.isNukeExploded) {
+                nukeObj.isNukeArmed = true;
+            }
+        }, 80);
+
+        // Fallback fuse ensures every dropped nuke detonates without forcing mid-air blasts.
+        this.scheduleNukeFailsafe(bodyId, power, 6500);
+
+        // Explode immediately when armed nuke touches the ground plane.
         nukeBody.addEventListener('collide', (e) => {
-            const velocity = nukeBody.velocity.length();
-            if (velocity > 20) {
+            const obj = this.objects.get(bodyId);
+            if (!obj || obj.isNukeExploded || !obj.isNukeArmed) return;
+
+            const hitBody = e?.body;
+            const hitGround = hitBody === this.physics.groundBody;
+            if (hitGround) {
                 this.explodeNuke(bodyId, power);
             }
         });
@@ -419,6 +481,12 @@ class ObjectManager {
         if (!obj || obj.isNukeExploded) return;
 
         obj.isNukeExploded = true;
+
+        const fuse = this.nukeFuseTimers.get(bodyId);
+        if (fuse) {
+            clearTimeout(fuse);
+            this.nukeFuseTimers.delete(bodyId);
+        }
 
         const center = new CANNON.Vec3(
             obj.physicsBody.position.x,

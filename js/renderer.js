@@ -365,6 +365,22 @@ class ThreeRenderer {
 
     removeMesh(mesh) {
         this.scene.remove(mesh);
+
+        // Dispose single meshes and grouped meshes safely.
+        if (mesh && typeof mesh.traverse === 'function') {
+            mesh.traverse((node) => {
+                if (node.geometry) node.geometry.dispose();
+                if (node.material) {
+                    if (Array.isArray(node.material)) {
+                        node.material.forEach(m => m.dispose());
+                    } else {
+                        node.material.dispose();
+                    }
+                }
+            });
+            return;
+        }
+
         if (mesh.geometry) mesh.geometry.dispose();
         if (mesh.material) {
             if (Array.isArray(mesh.material)) {
@@ -431,17 +447,57 @@ class ThreeRenderer {
                 geometry = new THREE.IcosahedronGeometry(size, 3);
                 break;
             case 'nuke':
-                // Nuke is a sphere with special material
-                geometry = new THREE.SphereGeometry(size, 16, 16);
-                material = new THREE.MeshStandardMaterial({
-                    color: 0xff9900,
-                    metalness: 0.8,
-                    roughness: 0.2,
-                    emissive: 0xff6600,
-                    transparent: true,
-                    opacity: 1
+                // Composite bomb mesh so it looks like a nuke, not an orange ball.
+                const nukeGroup = new THREE.Group();
+
+                const bodyMat = new THREE.MeshStandardMaterial({
+                    color: 0x5c6d2f,
+                    metalness: 0.55,
+                    roughness: 0.45
                 });
-                break;
+                const tipMat = new THREE.MeshStandardMaterial({
+                    color: 0x2f3a1c,
+                    metalness: 0.6,
+                    roughness: 0.35
+                });
+                const bandMat = new THREE.MeshStandardMaterial({
+                    color: 0xd6bf45,
+                    metalness: 0.35,
+                    roughness: 0.5,
+                    emissive: 0x1b1600
+                });
+
+                const body = new THREE.Mesh(
+                    new THREE.CylinderGeometry(size * 0.78, size * 0.9, size * 2.5, 18),
+                    bodyMat
+                );
+                const nose = new THREE.Mesh(
+                    new THREE.ConeGeometry(size * 0.78, size * 0.95, 18),
+                    tipMat
+                );
+                nose.position.y = size * 1.7;
+
+                const tail = new THREE.Mesh(
+                    new THREE.CylinderGeometry(size * 0.45, size * 0.8, size * 0.5, 18),
+                    tipMat
+                );
+                tail.position.y = -size * 1.45;
+
+                const band = new THREE.Mesh(
+                    new THREE.TorusGeometry(size * 0.83, size * 0.08, 12, 24),
+                    bandMat
+                );
+                band.rotation.x = Math.PI / 2;
+                band.position.y = size * 0.45;
+
+                nukeGroup.add(body, nose, tail, band);
+                nukeGroup.traverse((node) => {
+                    if (node.isMesh) {
+                        node.castShadow = true;
+                        node.receiveShadow = true;
+                    }
+                });
+                return nukeGroup;
             case 'wall':
                 // Wall mesh - vertical plane
                 geometry = new THREE.BoxGeometry(1, size, 200);

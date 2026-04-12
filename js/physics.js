@@ -4,6 +4,8 @@
 class PhysicsWorld {
     constructor() {
         this.world = new CANNON.World();
+        this.world.broadphase = new CANNON.SAPBroadphase(this.world);
+        this.world.broadphase.axisIndex = 1;
         // Scene units are larger than real-world meters, so scale gravity for natural feel.
         this.gravityScale = 2.0;
         this.world.gravity.set(0, -20 * this.gravityScale, 0);
@@ -11,7 +13,8 @@ class PhysicsWorld {
         this.world.defaultContactMaterial.restitution = 0.08;
         this.world.defaultContactMaterial.contactEquationRelaxation = 4;
         this.world.defaultContactMaterial.contactEquationStiffness = 3e7;
-        this.world.solver.iterations = 20;
+        this.world.solver.iterations = 24;
+        this.world.solver.tolerance = 0.001;
         this.world.allowSleep = false;
         this.world.sleepSpeedLimit = 0.1;
         this.defaultLinearDamping = 0.08;
@@ -24,7 +27,9 @@ class PhysicsWorld {
         this.idleLinearThreshold = 0.2;
         this.idleAngularThreshold = 0.22;
         this.maxSubSteps = 8;
-        this.groundPenetrationSlop = 0.015;
+        this.groundPenetrationSlop = 0.02;
+        this.penetrationCorrectionDepthThreshold = 0.45;
+        this.penetrationCorrectionMassThreshold = 35;
 
         this.setupGround();
         this.bodies = new Map();
@@ -78,12 +83,20 @@ class PhysicsWorld {
             // Ignore out-of-bounds bodies that intentionally have collisions disabled.
             if (body.collisionResponse === false || body.collisionFilterMask === 0) continue;
 
-            // Heavy bodies can tunnel in a single step; project them back above the plane.
+            // Heavy fast bodies can tunnel in a single step; only correct deep penetration.
             body.computeAABB();
-            if (body.aabb && body.aabb.lowerBound.y < (groundY - this.groundPenetrationSlop)) {
-                const correction = (groundY - body.aabb.lowerBound.y) + this.groundPenetrationSlop;
-                body.position.y += correction;
-                if (body.velocity.y < 0) body.velocity.y = 0;
+            if (body.aabb) {
+                const penetrationDepth = groundY - body.aabb.lowerBound.y;
+                const shouldCorrect = (
+                    penetrationDepth > this.penetrationCorrectionDepthThreshold &&
+                    (body.mass >= this.penetrationCorrectionMassThreshold || body.velocity.y < -12)
+                );
+
+                if (shouldCorrect) {
+                    const correction = penetrationDepth + this.groundPenetrationSlop;
+                    body.position.y += correction;
+                    if (body.velocity.y < 0) body.velocity.y = 0;
+                }
             }
 
             // Apply additional atmosphere drag scaling by mass for clearer learning behavior.
@@ -160,24 +173,26 @@ class PhysicsWorld {
     }
 
     createCylinderBody(position, radius = 2, height = 5, mass = 8, randomize = true) {
-        const coreLength = Math.max(0.6, height - radius * 0.9);
-        const cylinder = new CANNON.Cylinder(radius, radius, coreLength, 16);
+        const coreLength = Math.max(0.6, height - radius * 0.2);
+        const cylinder = new CANNON.Cylinder(radius, radius, coreLength, 18);
         const body = new CANNON.Body({ mass, linearDamping: this.defaultLinearDamping, angularDamping: this.defaultAngularDamping });
         body.addShape(cylinder);
-        // Rounded endcaps make vertical standing unstable and encourage realistic rolling.
-        body.addShape(new CANNON.Sphere(radius), new CANNON.Vec3(coreLength / 2, 0, 0));
-        body.addShape(new CANNON.Sphere(radius), new CANNON.Vec3(-coreLength / 2, 0, 0));
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
         return body;
     }
 
     createConeBody(position, radius = 2, height = 5, mass = 6, randomize = true) {
-        const cone = new CANNON.Cylinder(Math.max(0.06, radius * 0.08), radius, height, 16);
+        const cone = new CANNON.Cylinder(Math.max(0.14, radius * 0.22), radius, height, 16);
         const body = new CANNON.Body({ mass, linearDamping: this.defaultLinearDamping, angularDamping: this.defaultAngularDamping });
         const alignY = new CANNON.Quaternion();
         alignY.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.PI / 2);
         body.addShape(cone, new CANNON.Vec3(0, 0, 0), alignY);
+
+        // Add a tiny base stabilizer so cone base does not sink under heavy contact.
+        const baseHeight = Math.max(0.08, height * 0.06);
+        const base = new CANNON.Cylinder(radius * 0.9, radius * 0.9, baseHeight, 12);
+        body.addShape(base, new CANNON.Vec3(0, -height / 2 + baseHeight / 2, 0), alignY);
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
         return body;
@@ -186,11 +201,15 @@ class PhysicsWorld {
     createPyramidBody(position, size = 3, mass = 8, randomize = true) {
         const radius = size / 2;
         const height = size;
-        const pyramid = new CANNON.Cylinder(Math.max(0.04, radius * 0.08), radius, height, 4);
+        const pyramid = new CANNON.Cylinder(Math.max(0.12, radius * 0.2), radius, height, 4);
         const body = new CANNON.Body({ mass, linearDamping: this.defaultLinearDamping, angularDamping: this.defaultAngularDamping });
         const alignY = new CANNON.Quaternion();
         alignY.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.PI / 2);
         body.addShape(pyramid, new CANNON.Vec3(0, 0, 0), alignY);
+
+        const baseHeight = Math.max(0.08, height * 0.07);
+        const base = new CANNON.Cylinder(radius * 0.88, radius * 0.88, baseHeight, 4);
+        body.addShape(base, new CANNON.Vec3(0, -height / 2 + baseHeight / 2, 0), alignY);
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
         return body;
@@ -209,16 +228,12 @@ class PhysicsWorld {
     }
 
     createTorusBody(position, radius = 3, tubeRadius = 0.8, mass = 5, randomize = true) {
-        // Build torus as a ring of spheres so it rolls instead of balancing upright.
-        const body = new CANNON.Body({ mass, linearDamping: 0.12, angularDamping: 0.34 });
-        const segments = 14;
-        const nodeRadius = Math.max(0.22, tubeRadius * 0.92);
-        for (let i = 0; i < segments; i++) {
-            const a = (i / segments) * Math.PI * 2;
-            const x = Math.cos(a) * radius;
-            const z = Math.sin(a) * radius;
-            body.addShape(new CANNON.Sphere(nodeRadius), new CANNON.Vec3(x, 0, z));
-        }
+        // Use a smooth short-cylinder proxy to avoid ring-to-ring interlocking in bulk drops.
+        const body = new CANNON.Body({ mass, linearDamping: 0.18, angularDamping: 0.45 });
+        const disc = new CANNON.Cylinder(radius, radius, Math.max(0.35, tubeRadius * 1.8), 20);
+        const alignY = new CANNON.Quaternion();
+        alignY.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.PI / 2);
+        body.addShape(disc, new CANNON.Vec3(0, 0, 0), alignY);
         body.position.copy(position);
         if (randomize) this.randomizeVelocity(body);
         return body;
