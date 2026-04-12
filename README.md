@@ -12,6 +12,7 @@ The idea is simple: drop objects, tweak physics values, and watch how they behav
 - Shape-aware rigid bodies for non-sphere objects (fixed cone/pyramid ground clipping, horizontal cylinder/capsule behavior, and improved torus rolling)
 - Adjustable object mass, size, and drop position (X/Z) with shorter, compact control fields
 - Adjustable gravity, friction, restitution, and air resistance (linear + angular)
+- Atmosphere toggle to compare with/without drag in the same gravity preset
 - Adjustable ground width/height and void threshold
 - Play/pause and slow-motion toggle
 - Nuke drop with configurable power
@@ -47,6 +48,8 @@ Keyboard:
 UI:
 - Object buttons drop objects immediately using configured `Drop Height`, `X`, and `Z`
 - Physics inputs change simulation parameters live (including air resistance)
+- `Use Atmosphere Drag` lets you switch between atmospheric drag and vacuum behavior quickly
+- You can create your own planet environments by manually tuning gravity and drag values
 - Nuke power controls explosion strength
 - Destruction Mode toggles click-to-delete
 - Left and right panels can be collapsed independently

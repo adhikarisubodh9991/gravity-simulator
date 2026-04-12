@@ -94,6 +94,13 @@
             <h2 class="ui-section-title">Physics</h2>
 
             <div class="control-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="toggle-atmosphere" checked>
+                    <span>Use Atmosphere Drag</span>
+                </label>
+            </div>
+
+            <div class="control-group">
                 <label class="control-label">Gravity (m/s²)</label>
                 <input type="number" id="input-gravity" min="0" max="100" value="20" step="0.5" class="number-input">
             </div>
@@ -321,6 +328,22 @@
         let frameCount = 0;
         let lastFpsTime = performance.now();
 
+        const inputGravity = document.getElementById('input-gravity');
+        const inputAirLinear = document.getElementById('input-air-linear');
+        const inputAirAngular = document.getElementById('input-air-angular');
+        const toggleAtmosphere = document.getElementById('toggle-atmosphere');
+
+        function applyAirFromInputs() {
+            const linear = parseFloat(inputAirLinear.value);
+            const angular = parseFloat(inputAirAngular.value);
+            const useAtmosphere = !!toggleAtmosphere.checked;
+
+            physics.setAirResistance(
+                useAtmosphere ? linear : 0,
+                useAtmosphere ? angular : 0
+            );
+        }
+
         function animate() {
             requestAnimationFrame(animate);
             const now = performance.now();
@@ -358,6 +381,10 @@
             objectManager.clearAll();
         });
 
+        toggleAtmosphere.addEventListener('change', () => {
+            applyAirFromInputs();
+        });
+
         document.getElementById('input-gravity').addEventListener('change', (e) => {
             const gravity = parseFloat(e.target.value);
             physics.setGravity(gravity);
@@ -374,15 +401,11 @@
         });
 
         document.getElementById('input-air-linear').addEventListener('change', (e) => {
-            const linear = parseFloat(e.target.value);
-            const angular = parseFloat(document.getElementById('input-air-angular').value);
-            physics.setAirResistance(linear, angular);
+            applyAirFromInputs();
         });
 
         document.getElementById('input-air-angular').addEventListener('change', (e) => {
-            const angular = parseFloat(e.target.value);
-            const linear = parseFloat(document.getElementById('input-air-linear').value);
-            physics.setAirResistance(linear, angular);
+            applyAirFromInputs();
         });
 
         // Ground dimensions
@@ -419,11 +442,9 @@
             objectManager.setSoundEnabled(e.target.checked);
         });
 
-        // Initialize dynamic damping from configured controls on load.
-        physics.setAirResistance(
-            parseFloat(document.getElementById('input-air-linear').value),
-            parseFloat(document.getElementById('input-air-angular').value)
-        );
+        // Initialize from current manual inputs.
+        physics.setGravity(parseFloat(inputGravity.value));
+        applyAirFromInputs();
 
         // Keyboard shortcuts
         window.addEventListener('keydown', (e) => {
