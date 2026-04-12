@@ -16,6 +16,11 @@ class PhysicsWorld {
         this.world.sleepSpeedLimit = 0.1;
         this.defaultLinearDamping = 0.08;
         this.defaultAngularDamping = 0.12;
+        this.baseLinearDamping = this.defaultLinearDamping;
+        this.baseAngularDamping = this.defaultAngularDamping;
+        this.massDependentDrag = false;
+        this.massDragReferenceMass = 10;
+        this.massDependentDragStrength = 1.9;
         this.idleLinearThreshold = 0.2;
         this.idleAngularThreshold = 0.22;
         this.maxSubSteps = 8;
@@ -40,6 +45,9 @@ class PhysicsWorld {
 
     addBody(body) {
         this.world.addBody(body);
+        if (body && body.mass > 0 && this.massDependentDrag) {
+            this.applyMassDependentDamping(body);
+        }
         const id = this.bodyIndex++;
         this.bodies.set(id, body);
         return id;
@@ -76,6 +84,11 @@ class PhysicsWorld {
                 const correction = (groundY - body.aabb.lowerBound.y) + this.groundPenetrationSlop;
                 body.position.y += correction;
                 if (body.velocity.y < 0) body.velocity.y = 0;
+            }
+
+            // Apply additional atmosphere drag scaling by mass for clearer learning behavior.
+            if (this.massDependentDrag) {
+                this.applyMassDependentAtmosphericDrag(body, dt);
             }
 
             if (body.position.y > -22.5) continue;
@@ -220,13 +233,69 @@ class PhysicsWorld {
     }
 
     setAirResistance(linear, angular) {
-        this.defaultLinearDamping = Math.max(0, Math.min(1, Number(linear) || 0));
-        this.defaultAngularDamping = Math.max(0, Math.min(1, Number(angular) || 0));
+        this.baseLinearDamping = Math.max(0, Math.min(1, Number(linear) || 0));
+        this.baseAngularDamping = Math.max(0, Math.min(1, Number(angular) || 0));
+        this.defaultLinearDamping = this.baseLinearDamping;
+        this.defaultAngularDamping = this.baseAngularDamping;
 
         for (let [, body] of this.bodies) {
             if (!body || body.mass <= 0) continue;
-            body.linearDamping = this.defaultLinearDamping;
-            body.angularDamping = this.defaultAngularDamping;
+            if (this.massDependentDrag) {
+                this.applyMassDependentDamping(body);
+            } else {
+                body.linearDamping = this.baseLinearDamping;
+                body.angularDamping = this.baseAngularDamping;
+            }
+        }
+    }
+
+    setMassDependentDrag(enabled, referenceMass = 10) {
+        this.massDependentDrag = !!enabled;
+        this.massDragReferenceMass = Math.max(0.1, Number(referenceMass) || 10);
+
+        for (let [, body] of this.bodies) {
+            if (!body || body.mass <= 0) continue;
+            if (this.massDependentDrag) {
+                this.applyMassDependentDamping(body);
+            } else {
+                body.linearDamping = this.baseLinearDamping;
+                body.angularDamping = this.baseAngularDamping;
+            }
+        }
+    }
+
+    applyMassDependentDamping(body) {
+        const mass = Math.max(0.1, Number(body.mass) || 0.1);
+        const ref = this.massDragReferenceMass;
+
+        // Heavier than reference mass gets less drag; lighter gets more drag.
+        const scale = Math.max(0.12, Math.min(6.0, Math.pow(ref / mass, 0.85)));
+        body.linearDamping = Math.max(0, Math.min(1, this.baseLinearDamping * scale));
+        body.angularDamping = Math.max(0, Math.min(1, this.baseAngularDamping * scale));
+    }
+
+    applyMassDependentAtmosphericDrag(body, dt) {
+        const mass = Math.max(0.1, Number(body.mass) || 0.1);
+        const ref = this.massDragReferenceMass;
+        const massScale = Math.max(0.1, Math.min(8.0, ref / mass));
+
+        const linearK = (this.baseLinearDamping * 10 + 0.35) * this.massDependentDragStrength;
+        const angularK = (this.baseAngularDamping * 8 + 0.2) * this.massDependentDragStrength;
+
+        const v = body.velocity.length();
+        if (v > 0.001) {
+            const decay = Math.max(0, 1 - linearK * massScale * dt);
+            body.velocity.x *= decay;
+            body.velocity.y *= decay;
+            body.velocity.z *= decay;
+        }
+
+        const av = body.angularVelocity.length();
+        if (av > 0.001) {
+            const decayA = Math.max(0, 1 - angularK * massScale * dt);
+            body.angularVelocity.x *= decayA;
+            body.angularVelocity.y *= decayA;
+            body.angularVelocity.z *= decayA;
         }
     }
 

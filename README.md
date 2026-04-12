@@ -13,6 +13,7 @@ The idea is simple: drop objects, tweak physics values, and watch how they behav
 - Adjustable object mass, size, and drop position (X/Z) with shorter, compact control fields
 - Adjustable gravity, friction, restitution, and air resistance (linear + angular)
 - Atmosphere toggle to compare with/without drag in the same gravity preset
+- Optional mass-dependent drag toggle for learning demos (heavy falls faster, light falls slower)
 - Adjustable ground width/height and void threshold
 - Play/pause and slow-motion toggle
 - Nuke drop with configurable power
@@ -50,6 +51,7 @@ UI:
 - Physics inputs change simulation parameters live (including air resistance)
 - `Use Atmosphere Drag` lets you switch between atmospheric drag and vacuum behavior quickly
 - You can create your own planet environments by manually tuning gravity and drag values
+- `Mass-Dependent Drag (Learning)` exaggerates drag by mass so differences are easy to see during experiments
 - Nuke power controls explosion strength
 - Destruction Mode toggles click-to-delete
 - Left and right panels can be collapsed independently
